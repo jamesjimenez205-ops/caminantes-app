@@ -1,13 +1,13 @@
 // Envoltorio mínimo de IndexedDB: un store por entidad, todos con keyPath "id".
 const LocalDB = (() => {
-  const STORES = ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics'];
+  const STORES = ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics', 'attendance'];
   let db;
   const wrap = req => new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
   const os = (s, mode = 'readonly') => db.transaction(s, mode).objectStore(s);
   return {
     open() {
       return new Promise((res, rej) => {
-        const r = indexedDB.open('caminantes-scout', 2);
+        const r = indexedDB.open('caminantes-scout', 3);
         r.onupgradeneeded = () => STORES.forEach(s => { if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s, { keyPath: 'id' }); });
         r.onsuccess = () => { db = r.result; res(); };
         r.onerror = () => rej(r.error);

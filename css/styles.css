@@ -341,3 +341,19 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .act-title { font-size: 1.05rem; line-height: 1.25; }
 .meta .num { font-weight: 700; color: var(--forest-2); }
 .lbl small#anum { color: var(--forest-2); font-weight: 600; }
+
+/* ---- Asistencia */
+.att-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.att-date { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--forest); } .att-date input { width: auto; }
+.att-count { display: flex; gap: 8px; flex-wrap: wrap; }
+.att-list { list-style: none; margin: 0; padding: 0; }
+.att-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--sand); flex-wrap: wrap; }
+.att-list li:last-child { border: 0; } .att-list .who { font-weight: 600; flex: 1; min-width: 150px; display: flex; align-items: center; gap: 10px; margin: 0; }
+.seg { display: inline-flex; border: 1.5px solid var(--sand-2); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: #fff; padding: 9px 14px; font: 600 .88rem var(--sans); color: var(--muted); cursor: pointer; }
+.seg button + button { border-left: 1.5px solid var(--sand-2); }
+.seg button.on.P { background: var(--done); color: #fff; } .seg button.on.A { background: var(--warn); color: #fff; } .seg button.on.J { background: var(--prog); color: #3a2a06; }
+.att-hist .row { cursor: pointer; }
+@media (max-width: 560px) { .seg { width: 100%; } .seg button { flex: 1; padding: 11px 6px; } }
+
+#main { min-width: 0; }

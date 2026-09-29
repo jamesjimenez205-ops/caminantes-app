@@ -1,5 +1,5 @@
 // Insignias de competencias de la Comunidad de Caminantes (Scouts de Panamá).
-// Áreas según el manual 2019. Los requisitos son los mismos en todas: 4 actividades, proyecto final e informe
+// Áreas según el manual 2019. Los requisitos son los mismos en todas: 3 actividades, proyecto final e informe
 // (las actividades concretas las define el grupo). Se editan en Insignias → Editar.
 const AREAS = [
   { id: 'a1', name: 'Ciencia y Tecnología', icon: 'flask', color: '#1c4a9a',
@@ -13,12 +13,13 @@ const AREAS = [
   { id: 'a5', name: 'Servicio Público', icon: 'heart', color: '#5a6fa8',
     description: 'Responsabilidad y compromiso con la comunidad: voluntariado y proyectos de servicio comunitario.', },
 ];
-// Requisitos de TODAS las áreas: 4 actividades (las define el grupo), proyecto final e informe.
-const REQS = ['Actividad 1', 'Actividad 2', 'Actividad 3', 'Actividad 4', 'Proyecto final', 'Entrega del informe'];
-const REQ_VERSION = 2;
+// Requisitos de TODAS las áreas: 3 actividades (las define el grupo), proyecto final e informe.
+// Los ids se mantienen estables entre versiones (r4 quedó libre al quitar la «Actividad 4»).
+const REQS = [['r1', 'Actividad 1'], ['r2', 'Actividad 2'], ['r3', 'Actividad 3'], ['r5', 'Proyecto final'], ['r6', 'Entrega del informe']];
+const REQ_VERSION = 3;
 const SEED_BADGES = AREAS.map((a, i) => ({
   ...a, section: 'caminantes', order: i + 1, reqVersion: REQ_VERSION,
-  requirements: REQS.map((text, n) => ({ id: a.id + 'r' + (n + 1), text })),
+  requirements: REQS.map(([k, text]) => ({ id: a.id + k, text })),
 }));
 const SEED_IDS = new Set(SEED_BADGES.map(b => b.id));
 

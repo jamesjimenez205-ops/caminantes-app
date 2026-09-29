@@ -10,7 +10,7 @@ const Cloud = (() => {
     ['auth-compat.js', 'sha384-NiuRnBs5Z0OgJ12kYJLSeWxANeJN369zH3+Zn0TGVPaCH/TKmbPFqfOmmLtrj+wg'],
     ['firestore-compat.js', 'sha384-/SBCyt0JELVRyyrOp+QG5CdnpVoAry+uw9hdherLgyZxxePtHjOvQmJU5CHymUhT'],
   ];
-  const COLS = ['scouts', 'badges', 'completions', 'activities', 'specifics']; // en memoria y en vivo
+  const COLS = ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance']; // en memoria y en vivo
   const mirror = Object.fromEntries(COLS.map(c => [c, new Map()]));
   const photoCache = new Map();
   let fs, auth;

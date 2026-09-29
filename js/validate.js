@@ -147,6 +147,23 @@ const V = (() => {
     }
     return out;
   }
+  // Asistencia de una reunión: un documento por fecha; records = { idCaminante: 'P' | 'A' | 'J' }
+  function attendance(o, ctx) {
+    obj(o, 'date', 'Asistencia');
+    const records = {};
+    for (const [sid, v] of Object.entries(obj(o.records ?? {}, 'records', 'Asistencia'))) {
+      if (['__proto__', 'constructor', 'prototype'].includes(sid)) fail('records', 'Caminante no válido');
+      id(sid, 'records', 'Caminante');
+      if (!['P', 'A', 'J'].includes(v)) fail('records', 'Estado de asistencia no válido');
+      records[sid] = v;
+    }
+    if (Object.keys(records).length > 300) fail('records', 'Demasiados registros');
+    if (ctx && Object.keys(records).some(s => !ctx.scouts.has(s))) fail('records', 'Caminante inexistente');
+    return {
+      id: id(o.id), section: sec(o.section), date: date(o.date, { field: 'date', label: 'Fecha', required: true }), records,
+      note: text(o.note, { field: 'note', label: 'Nota', max: 120 }), createdAt: Number.isFinite(o.createdAt) ? o.createdAt : Date.now(),
+    };
+  }
   function completion(o, ctx) {
     obj(o, 'completion', 'Avance');
     const c = { id: id(o.id), scoutId: id(o.scoutId), badgeId: id(o.badgeId), reqId: id(o.reqId), activityId: optId(o.activityId, 'activityId'), date: date(o.date, { label: 'Fecha' }) };
@@ -179,7 +196,7 @@ const V = (() => {
   }
 
   // ---- Respaldo completo: reconstruye todo con lista blanca de campos
-  const LIMITS = { scouts: 500, badges: 30, completions: 30000, activities: 6000, specifics: 3000, photos: 3000 };
+  const LIMITS = { attendance: 3000, scouts: 500, badges: 30, completions: 30000, activities: 6000, specifics: 3000, photos: 3000 };
   const PHOTO_RE = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
   function backup(d) {
     obj(d, 'file', 'Archivo de respaldo');
@@ -206,7 +223,8 @@ const V = (() => {
     });
     const have = new Set(photos.map(p => p.id));
     activities.forEach(a => { a.photoIds = a.photoIds.filter(x => have.has(x)); });
-    return { scouts, badges, specifics, activities, completions, photos };
+    const attendanceList = (d.attendance ? arr(d.attendance, LIMITS.attendance, 'file', 'Asistencia') : []).map(o => attendance(o, ctx));
+    return { scouts, badges, specifics, activities, completions, photos, attendance: attendanceList };
   }
 
   // ---- Acceso
@@ -220,7 +238,7 @@ const V = (() => {
     return [u.trim().toLowerCase(), p];
   }
 
-  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, email, LIMITS };
+  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, email, attendance, LIMITS };
 })();
 
 // Muestra un error de validación sobre el campo correspondiente del formulario. Devuelve true si era de validación.

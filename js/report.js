@@ -79,6 +79,20 @@ const Report = {
       }
     }
 
+    // Asistencia
+    if (f.progress && S.attendance.some(a => (!f.from || a.date >= f.from) && (!f.to || a.date <= f.to))) {
+      const list = scout ? [scout] : S.scouts;
+      const ses = S.attendance.filter(a => (!f.from || a.date >= f.from) && (!f.to || a.date <= f.to)).length;
+      ensure(20); txt(`Asistencia (${ses} ${ses === 1 ? 'reunión registrada' : 'reuniones registradas'})`, M, y, { size: 14, bold: true, color: FOREST }); y += 3;
+      doc.setDrawColor(...LEAF); doc.setLineWidth(0.6); doc.line(M, y, M + 22, y); y += 7;
+      for (const s of list) {
+        const st = Store.attendanceStats(s.id, f); ensure(7);
+        txt(s.name, M + 4, y, { size: 9 }); drawBar(M + 70, y - 2.6, 60, st.pct);
+        txt(`${st.pct}%  ·  P ${st.P}  A ${st.A}  J ${st.J}`, M + 135, y, { size: 9, color: MUTED }); y += 6;
+      }
+      y += 6;
+    }
+
     // Actividades
     ensure(20); txt(`Actividades (${acts.length})`, M, y, { size: 14, bold: true, color: FOREST }); y += 3;
     doc.setDrawColor(...LEAF); doc.line(M, y, M + 22, y); y += 8;

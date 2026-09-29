@@ -1,7 +1,7 @@
 // Estado en memoria + reglas de negocio. Las fotos (blobs) se leen bajo demanda.
 // S = datos de la sección activa; ALL = todo lo guardado (todas las secciones).
-const S = { scouts: [], badges: [], completions: [], activities: [], specifics: [] };
-const ALL = { scouts: [], badges: [], completions: [], activities: [], specifics: [] };
+const S = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [] };
+const ALL = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [] };
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -50,10 +50,10 @@ const Store = {
       const b = S.badges.find(x => x.id === seed.id);
       if (b && b.requirements.every(r => /^Competencia \d$/.test(r.text))) { await DB.put('badges', seed); await this.reload(); }
     }
-    // Migración: todas las áreas pasan a 4 actividades + proyecto final + informe (una vez por área).
+    // Migración: todas las áreas pasan a actividades + proyecto final + informe (una vez por área).
     for (const seed of SEED_BADGES) {
       const b = S.badges.find(x => x.id === seed.id);
-      if (!b || (b.reqVersion || 0) >= REQ_VERSION) continue;
+      if (!b || (b.reqVersion || 0) >= 2) continue;
       // Lo registrado se conserva si solo usa las posiciones de actividad (las primeras 4, nunca proyecto/informe):
       // esas posiciones pasan a ser «Actividad 1..4» con el mismo id.
       const pos = new Map(b.requirements.map((r, i) => [r.id, i]));
@@ -63,6 +63,14 @@ const Store = {
       ]);
       const safe = [...usedIds].every(id => pos.has(id) && pos.get(id) < 4 && !/proyecto|informe/i.test(b.requirements[pos.get(id)].text));
       if (safe) await DB.put('badges', { ...seed, name: b.name, description: b.description, color: b.color, icon: b.icon });
+    }
+    await this.reload();
+    // v3: solo 3 actividades. Se quita «Actividad 4» y se conserva todo lo demás (ids y avances).
+    for (const b of [...S.badges]) {
+      if (!SEED_IDS.has(b.id) || (b.reqVersion || 0) >= REQ_VERSION) continue;
+      const gone = b.requirements.filter(r => /^Actividad\s+4$/i.test(r.text)).map(r => r.id);
+      for (const c of S.completions.filter(c => gone.includes(c.reqId))) await DB.del('completions', c.id);
+      await DB.put('badges', { ...b, requirements: b.requirements.filter(r => !gone.includes(r.id)), reqVersion: REQ_VERSION });
     }
     await this.reload();
     const OLD = { a1: '#3f6b6b', a2: '#5f8f3e', a3: '#8a5a34', a4: '#a3743f', a5: '#2d5a3d' };
@@ -75,7 +83,8 @@ const Store = {
   async reload() {
     for (const k of Object.keys(ALL)) ALL[k] = await DB.all(k);
     const inSec = o => (o.section || 'caminantes') === this.section;
-    for (const k of ['scouts', 'badges', 'activities', 'specifics']) S[k] = ALL[k].filter(inSec);
+    for (const k of ['scouts', 'badges', 'activities', 'specifics', 'attendance']) S[k] = ALL[k].filter(inSec);
+    S.attendance.sort((a, b) => b.date.localeCompare(a.date));
     const mine = new Set(S.scouts.map(s => s.id));
     S.completions = ALL.completions.filter(c => mine.has(c.scoutId));
     S.badges.forEach(b => { if (!/^#[0-9a-f]{6}$/i.test(b.color)) b.color = '#1c4a9a'; if (!Object.hasOwn(ICONS, b.icon)) b.icon = 'compass'; }); // defensa al pintar
@@ -102,6 +111,10 @@ const Store = {
     for (const c of S.specifics.filter(c => c.scoutId === id)) await DB.del('specifics', c.id);
     for (const c of S.completions.filter(c => c.scoutId === id)) await DB.del('completions', c.id);
     for (const a of S.activities.filter(a => a.scoutIds.includes(id))) await DB.put('activities', { ...a, scoutIds: a.scoutIds.filter(x => x !== id) });
+    for (const a of S.attendance.filter(a => id in a.records)) {
+      const records = { ...a.records }; delete records[id];
+      if (Object.keys(records).length) await DB.put('attendance', { ...a, records }); else await DB.del('attendance', a.id);
+    }
     await this.reload();
   },
 
@@ -230,6 +243,37 @@ const Store = {
       (!scoutId || a.scoutIds.includes(scoutId)) && (!badgeId || a.badgeId === badgeId));
   },
 
+  // ---- Asistencia
+  attendanceOn(date) { return S.attendance.find(a => a.date === date); },
+  async _saveAttendance(date, records, note) {
+    V.date(date, { field: 'date', label: 'Fecha', required: true });
+    const cur = this.attendanceOn(date);
+    if (!Object.keys(records).length) { if (cur) { await DB.del('attendance', cur.id); await this.reload(); } return; }
+    const o = V.attendance({ id: cur?.id || this.section + '_' + date, section: this.section, date, records,
+      note: note ?? cur?.note ?? '', createdAt: cur?.createdAt || Date.now() }, V.context(S.scouts, S.badges));
+    await DB.put('attendance', o); await this.reload();
+  },
+  async setAttendance(date, sid, val) {
+    if (!this.scout(sid)) throw new V.ValidationError('records', 'Caminante inexistente');
+    const rec = { ...(this.attendanceOn(date)?.records || {}) };
+    if (val) rec[sid] = val; else delete rec[sid];
+    await this._saveAttendance(date, rec);
+  },
+  async setAttendanceAll(date, val) {
+    const rec = {}; if (val) S.scouts.forEach(s => { rec[s.id] = val; });
+    await this._saveAttendance(date, rec);
+  },
+  async deleteAttendance(date) { await this._saveAttendance(date, {}); },
+  attendanceStats(sid, { from, to } = {}) {
+    let P = 0, A = 0, J = 0;
+    for (const a of S.attendance) {
+      if ((from && a.date < from) || (to && a.date > to)) continue;
+      const v = a.records[sid]; if (v === 'P') P++; else if (v === 'A') A++; else if (v === 'J') J++;
+    }
+    const total = P + A + J;
+    return { P, A, J, total, pct: pct(P, total) };
+  },
+
   // ---- Recordatorios
   issues(a) {
     const r = [];
@@ -255,7 +299,7 @@ const Store = {
     const photos = await DB.all('photos');
     return JSON.stringify({
       version: 1, exported: new Date().toISOString(),
-      scouts: ALL.scouts, badges: ALL.badges, completions: ALL.completions, activities: ALL.activities, specifics: ALL.specifics,
+      scouts: ALL.scouts, badges: ALL.badges, completions: ALL.completions, activities: ALL.activities, specifics: ALL.specifics, attendance: ALL.attendance,
       photos: await Promise.all(photos.map(async p => ({ id: p.id, data: await blobToDataURL(p.blob) }))),
     });
   },
@@ -269,8 +313,8 @@ const Store = {
       const blob = new Blob([Uint8Array.from(bin, c => c.charCodeAt(0))], { type: p.data.slice(5, p.data.indexOf(';')) });
       try { photos.push({ id: p.id, blob: await resizeImage(blob) }); } catch { throw new V.ValidationError('file', 'Una de las fotos no se pudo leer como imagen'); }
     }
-    for (const s of ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics']) await DB.clear(s);
-    for (const s of ['scouts', 'badges', 'completions', 'activities', 'specifics']) for (const o of d[s] || []) await DB.put(s, o);
+    for (const s of ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics', 'attendance']) await DB.clear(s);
+    for (const s of ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance']) for (const o of d[s] || []) await DB.put(s, o);
     for (const p of photos) await DB.put('photos', p);
     this._urls.clear();
     await this.reload();

@@ -28,6 +28,7 @@ const ICONS = {
   fire: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',
   flask: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/>',
   book: '<path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 13l2 2 4-4"/>',
   star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
   logout: '<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>',
   heart: '<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/>',
@@ -105,4 +106,4 @@ const emptyState = (title, text, btn = '') => `<div class="empty">${emptyArt()}<
 
 // Vistas y manejadores globales (los definen los archivos de views/)
 const Views = {}, Actions = {}, Changes = {};
-const UIState = { actFilter: '', badgeScout: '', report: { from: '', to: '', scoutId: '', badgeId: '', photos: true, progress: true } };
+const UIState = { attDate: '', actFilter: '', badgeScout: '', report: { from: '', to: '', scoutId: '', badgeId: '', photos: true, progress: true } };

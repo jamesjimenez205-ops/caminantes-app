@@ -1,0 +1,90 @@
+// Router por hash, navegación y acciones delegadas.
+const NAV = [
+  ['inicio', 'Inicio', 'home'], ['caminantes', '', 'users'], ['insignias', 'Insignias', 'award'],
+  ['actividades', 'Actividades', 'calendar'], ['progreso', 'Progreso', 'chart'], ['maximo-logro', 'Máximo logro', 'star', 'honor'], ['reportes', 'Reportes', 'file'],
+];
+
+const route = () => { const [name, param] = (location.hash.replace(/^#\/?/, '') || 'inicio').split('/'); return { name: Object.hasOwn(Views, name) ? name : 'inicio', param: /^[A-Za-z0-9_-]{1,40}$/.test(param || '') ? param : undefined }; };
+
+function renderNav(active) {
+  $('#side').innerHTML = `
+    <a class="brand" href="#/inicio">
+      <img src="${GROUP.logo}" alt="Logo del grupo">
+      <span><b>${esc(GROUP.name)}</b><small>${esc(GROUP.tagline)}</small></span></a>
+    <button class="btn accent side-new" data-act="new-activity">${icon('plus')} Nueva actividad</button>
+    <div class="sections">${Object.values(SECTIONS).map(s => `<button class="sec ${s.id === Store.section ? 'on' : ''}" ${s.enabled ? '' : 'disabled'} data-act="pick-section" data-id="${s.id}">${s.logo ? `<img src="${s.logo}" alt="">` : icon('tent')}<span><b>${esc(s.short)}</b><small>${s.enabled ? esc(s.ages) : 'Próximamente'}</small></span></button>`).join('')}</div>
+    <nav>${NAV.filter(n => !n[3] || Sec().features[n[3]]).map(([k, label, ic]) => `<a href="#/${k}" class="${k === active ? 'on' : ''}">${icon(ic)}<span>${esc(k === 'caminantes' ? Sec().people : label)}</span></a>`).join('')}</nav>
+    <button class="side-foot" data-act="backup">${icon('save')}<span>Respaldo</span></button>
+    <button class="side-foot" data-act="logout">${icon('logout')}<span>Cerrar sesión</span></button>
+    <svg class="side-art" viewBox="0 0 250 90" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path d="M0 90V55l40-30 35 25 45-40 55 45 40-25 35 30v30z" fill="#1a5a2c"/>${pineSvg(30, 88, 1.1, '#0c2a16')}${pineSvg(70, 90, .8, '#0c2a16')}${pineSvg(200, 88, 1.2, '#0c2a16')}${pineSvg(230, 90, .9, '#0c2a16')}</svg>`;
+}
+
+function sectionBar() {
+  const s = Sec();
+  return `<div class="section-bar" style="--c:${s.accent}">${s.logo ? `<img src="${s.logo}" alt="">` : icon('tent')}
+    <span class="grow"><small>Sección</small><b>${esc(s.name)}</b></span>
+    <button class="btn" data-act="open-sections">${icon('users')} Cambiar sección</button></div>`;
+}
+
+function render(keepScroll) {
+  const { name, param } = route();
+  const y = window.scrollY;
+  $('#main').innerHTML = `<div class="page">${sectionBar()}${Views[name].render(param)}</div>`;
+  Views[name].mount?.($('#main'), param);
+  hydratePhotos($('#main'));
+  renderNav(name);
+  window.scrollTo(0, keepScroll ? y : 0);
+}
+const rerender = () => render(true);
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && Object.hasOwn(Actions, el.dataset.act)) { e.preventDefault(); Actions[el.dataset.act](el.dataset, el); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.act-card')) { e.preventDefault(); e.target.click(); }
+});
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-change]');
+  if (el && Object.hasOwn(Changes, el.dataset.change)) Changes[el.dataset.change](el);
+});
+window.addEventListener('hashchange', () => render());
+
+Actions['close-modal'] = closeModal;
+Actions['open-sections'] = () => openModal(`
+  <header class="modal-head"><h2>Secciones del grupo</h2><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
+  <div class="modal-body"><div class="section-cards">${Object.values(SECTIONS).map(s => `
+    <button class="section-card ${s.id === Store.section ? 'on' : ''}" style="--c:${s.accent}" ${s.enabled ? '' : 'disabled'} data-act="pick-section" data-id="${s.id}">
+      ${s.logo ? `<img src="${s.logo}" alt="">` : `<span class="ph-ic">${icon('tent')}</span>`}
+      <b>${esc(s.name)}</b><small>${esc(s.ages)}</small>
+      <span class="tag ${s.enabled ? (s.id === Store.section ? 'done' : 'prog') : 'pend'}">${s.enabled ? (s.id === Store.section ? 'Sección actual' : 'Entrar') : 'Próximamente'}</span>
+    </button>`).join('')}</div>
+    <p class="muted"><small>Cada sección guarda sus propios ${esc('Caminantes, actividades, insignias y progreso')}, separados de las demás.</small></p></div>`);
+Actions['pick-section'] = async d => { await Store.setSection(d.id); closeModal(); location.hash = '#/inicio'; render(); };
+Actions['logout'] = () => Auth.logout();
+Actions['backup'] = () => openModal(`
+  <header class="modal-head"><h2>Respaldo de datos</h2><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
+  <div class="modal-body">
+    <p>Los datos viven en este navegador. Descarga un respaldo con regularidad y úsalo para pasar la información al otro dirigente.</p>
+    <div class="backup-actions">
+      <button class="btn primary" id="do-export">${icon('download')} Descargar respaldo</button>
+      <label class="btn">${icon('save')} Restaurar respaldo<input type="file" id="do-import" accept="application/json" hidden></label>
+    </div>
+    <p class="muted"><small>Restaurar reemplaza todo lo que hay ahora en este navegador.</small></p>
+  </div>`, {
+  onMount: m => {
+    $('#do-export', m).onclick = async () => { download(await Store.exportAll(), `respaldo-caminantes-${today()}.json`); toast('Respaldo descargado'); };
+    $('#do-import', m).onchange = async e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      if (f.size > 400e6 || !/\.json$/i.test(f.name)) return toast('Elige un archivo de respaldo .json (máximo 400 MB)', 'err');
+      if (!confirm('Se reemplazarán TODOS los datos actuales por los del archivo. ¿Continuar?')) return;
+      try { await Store.importAll(await f.text()); closeModal(); toast('Datos restaurados'); render(); }
+      catch (err) { toast(err instanceof V.ValidationError ? err.message : 'Archivo no válido', 'err'); }
+    };
+  },
+});
+
+Auth.gate().then(() => Store.init()).then(() => render()).catch(err => {
+  console.error(err);
+  $('#main').innerHTML = '<div class="page"><div class="card note">No se pudo abrir el almacenamiento del navegador. Si estás en modo privado, usa una ventana normal.</div></div>';
+});

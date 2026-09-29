@@ -357,3 +357,16 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 @media (max-width: 560px) { .seg { width: 100%; } .seg button { flex: 1; padding: 11px 6px; } }
 
 #main { min-width: 0; }
+
+/* ---- Menú lateral: se desplaza si la pantalla es baja, y se compacta */
+#side { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent; padding-bottom: 12px; }
+#side .side-foot { flex: none; }
+#side nav { flex: none; }
+.side-art { position: fixed; left: 0; bottom: 0; width: 250px; }
+@media (min-width: 761px) and (max-height: 860px) {
+  #side { gap: 8px; padding-top: 14px; }
+  #side nav a { padding: 8px 12px; }
+  .sec small { display: none; } .sec { padding: 6px 10px; }
+  .brand img { height: 42px; }
+  .side-art { display: none; }
+}

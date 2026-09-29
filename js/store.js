@@ -50,6 +50,21 @@ const Store = {
       const b = S.badges.find(x => x.id === seed.id);
       if (b && b.requirements.every(r => /^Competencia \d$/.test(r.text))) { await DB.put('badges', seed); await this.reload(); }
     }
+    // Migración: todas las áreas pasan a 4 actividades + proyecto final + informe (una vez por área).
+    for (const seed of SEED_BADGES) {
+      const b = S.badges.find(x => x.id === seed.id);
+      if (!b || (b.reqVersion || 0) >= REQ_VERSION) continue;
+      // Lo registrado se conserva si solo usa las posiciones de actividad (las primeras 4, nunca proyecto/informe):
+      // esas posiciones pasan a ser «Actividad 1..4» con el mismo id.
+      const pos = new Map(b.requirements.map((r, i) => [r.id, i]));
+      const usedIds = new Set([
+        ...S.completions.filter(c => c.badgeId === b.id).map(c => c.reqId),
+        ...S.activities.filter(x => x.badgeId === b.id).flatMap(x => x.reqIds),
+      ]);
+      const safe = [...usedIds].every(id => pos.has(id) && pos.get(id) < 4 && !/proyecto|informe/i.test(b.requirements[pos.get(id)].text));
+      if (safe) await DB.put('badges', { ...seed, name: b.name, description: b.description, color: b.color, icon: b.icon });
+    }
+    await this.reload();
     const OLD = { a1: '#3f6b6b', a2: '#5f8f3e', a3: '#8a5a34', a4: '#a3743f', a5: '#2d5a3d' };
     for (const b of S.badges) {
       if (OLD[b.id] === b.color) await DB.put('badges', { ...b, color: SEED_BADGES.find(x => x.id === b.id).color });

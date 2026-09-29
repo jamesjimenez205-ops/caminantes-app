@@ -114,6 +114,7 @@ const V = (() => {
       name: text(o.name, { field: 'name', label: 'Nombre', min: 2, max: 60, required: true }),
       description: text(o.description, { field: 'description', label: 'Descripción', max: 300 }),
       color: color(o.color), icon: icon(o.icon), requirements: reqs,
+      reqVersion: o.reqVersion == null ? 0 : int(o.reqVersion, { field: 'reqVersion', label: 'Versión', min: 0, max: 99 }),
     };
   }
   function specific(o, ctx) {

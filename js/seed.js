@@ -1,26 +1,24 @@
 // Insignias de competencias de la Comunidad de Caminantes (Scouts de Panamá).
-// Áreas según el manual 2019; requisitos según la presentación "Progresión, Insignia"
-// (Competencias e Insignias Internacionales de Caminante, G3). Se editan en Insignias → Editar.
+// Áreas según el manual 2019. Los requisitos son los mismos en todas: 4 actividades, proyecto final e informe
+// (las actividades concretas las define el grupo). Se editan en Insignias → Editar.
 const AREAS = [
   { id: 'a1', name: 'Ciencia y Tecnología', icon: 'flask', color: '#1c4a9a',
-    description: 'Desarrollar habilidades científicas y tecnológicas: investigar, analizar, resolver problemas y aplicar el método científico.',
-    reqs: ['Taller de Robótica', 'Robot sigue-líneas', 'Robot de seguimiento de luz', 'Informe'] },
+    description: 'Desarrollar habilidades científicas y tecnológicas: investigar, analizar, resolver problemas y aplicar el método científico.', },
   { id: 'a2', name: 'Ciencias Naturales', icon: 'pine', color: '#3b8fc4',
-    description: 'Comprender el mundo natural: medio ambiente, seres vivos, ecosistemas y recursos naturales, con actitud responsable hacia el planeta.',
-    reqs: ['Actividades de Champions for Nature', 'Proyecto', 'Informe'] },
+    description: 'Comprender el mundo natural: medio ambiente, seres vivos, ecosistemas y recursos naturales, con actitud responsable hacia el planeta.', },
   { id: 'a3', name: 'Desarrollo Físico', icon: 'mountain', color: '#33383f',
-    description: 'Bienestar y salud mediante actividad física regular: resistencia, flexibilidad, fuerza y coordinación.',
-    reqs: ['Actividad física 1', 'Actividad física 2', 'Actividad física 3', 'Proyecto', 'Informe'] },
+    description: 'Bienestar y salud mediante actividad física regular: resistencia, flexibilidad, fuerza y coordinación.', },
   { id: 'a4', name: 'Socio Cultural', icon: 'book', color: '#b8860b',
-    description: 'Actividades humanísticas, artísticas y culturales: creatividad, expresión personal y apreciación cultural.',
-    reqs: ['Actividad 1', 'Actividad 2', 'Extra (ej.: banda de música)', 'Proyecto', 'Informe'] },
+    description: 'Actividades humanísticas, artísticas y culturales: creatividad, expresión personal y apreciación cultural.', },
   { id: 'a5', name: 'Servicio Público', icon: 'heart', color: '#5a6fa8',
-    description: 'Responsabilidad y compromiso con la comunidad: voluntariado y proyectos de servicio comunitario.',
-    reqs: ['Completar 50 horas de labor social', 'Completar 100 horas de labor social', 'Proyecto', 'Informe'] },
+    description: 'Responsabilidad y compromiso con la comunidad: voluntariado y proyectos de servicio comunitario.', },
 ];
-const SEED_BADGES = AREAS.map(({ reqs, ...a }, i) => ({
-  ...a, section: 'caminantes', order: i + 1,
-  requirements: reqs.map((text, n) => ({ id: a.id + 'r' + (n + 1), text })),
+// Requisitos de TODAS las áreas: 4 actividades (las define el grupo), proyecto final e informe.
+const REQS = ['Actividad 1', 'Actividad 2', 'Actividad 3', 'Actividad 4', 'Proyecto final', 'Entrega del informe'];
+const REQ_VERSION = 2;
+const SEED_BADGES = AREAS.map((a, i) => ({
+  ...a, section: 'caminantes', order: i + 1, reqVersion: REQ_VERSION,
+  requirements: REQS.map((text, n) => ({ id: a.id + 'r' + (n + 1), text })),
 }));
 const SEED_IDS = new Set(SEED_BADGES.map(b => b.id));
 

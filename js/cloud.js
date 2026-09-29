@@ -44,7 +44,7 @@ const Cloud = (() => {
         let first = true;
         fs.collection(c).onSnapshot(snap => {
           snap.docChanges().forEach(ch => (ch.type === 'removed' ? mirror[c].delete(ch.doc.id) : mirror[c].set(ch.doc.id, ch.doc.data())));
-          if (first) { first = false; res(); } else if (!snap.metadata.hasPendingWrites && db.onChange) db.onChange(c);
+          if (first) { first = false; res(); } else if (db.onChange) db.onChange(c);
         }, err => { if (first) rej(err); else report(err); });
       })));
     },

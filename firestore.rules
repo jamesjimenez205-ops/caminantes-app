@@ -2,18 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Solo las dos cuentas autorizadas. Cambia los correos por los reales.
+    // Solo las dos cuentas autorizadas del grupo. En este archivo van correos de ejemplo:
+    // los reales se ponen únicamente en la consola de Firebase (Firestore → Reglas).
     function permitido() {
       return request.auth != null
         && request.auth.token.email in ['CORREO_1@ejemplo.com', 'CORREO_2@ejemplo.com'];
     }
 
     match /{coleccion}/{doc} {
-      allow read, delete: if permitido()
+      allow read, write: if permitido()
         && coleccion in ['scouts', 'badges', 'completions', 'activities', 'specifics', 'photos'];
-      allow create, update: if permitido()
-        && coleccion in ['scouts', 'badges', 'completions', 'activities', 'specifics', 'photos']
-        && request.resource.size < 1000000;
     }
   }
 }

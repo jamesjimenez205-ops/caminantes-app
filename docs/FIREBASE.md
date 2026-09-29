@@ -20,8 +20,7 @@ Con esto, lo que registre una persona lo ve la otra al instante. Es gratis para 
    ```js
    const FIREBASE_CONFIG = { apiKey: '...', authDomain: '...', projectId: '...', storageBucket: '...', messagingSenderId: '...', appId: '...' };
    ```
-3. En **Authentication → Configuración → Dominios autorizados** agrega el dominio donde publicas la app (por ejemplo `tu-usuario.github.io`; `localhost` ya viene).
-4. Sube los cambios a GitHub. En un minuto la app pedirá **correo y contraseña** y guardará todo en la nube.
+3. Sube los cambios a GitHub. En un minuto la app pedirá **correo y contraseña** y guardará todo en la nube.
 
 ## 5. Pasar los datos que ya tenían
 Los datos del modo local no se suben solos. Antes de activar la nube, en la versión local: **Respaldo → Descargar respaldo**. Después de activarla, quien entre primero: **Respaldo → Restaurar respaldo** (los datos quedan compartidos).

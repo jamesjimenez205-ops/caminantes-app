@@ -38,11 +38,13 @@ function render(keepScroll) {
 const rerender = () => render(true);
 
 // Cambios hechos por otra persona (tiempo real): se recarga sin pisar lo que se está escribiendo.
+let remoteTimer;
 function remoteChange() {
-  Store.reload().then(() => {
+  clearTimeout(remoteTimer); // varios cambios seguidos = una sola recarga
+  remoteTimer = setTimeout(() => Store.reload().then(() => {
     const busy = $('#modal-root').innerHTML.trim() || document.activeElement?.matches?.('input,textarea,select');
     if (busy) PENDING_RENDER = true; else render(true);
-  });
+  }), 250);
 }
 function cloudError(e) { toast(e?.code === 'permission-denied' ? 'Sin permiso para guardar en la nube' : 'No se pudo sincronizar. Se reintentará al volver la conexión.', 'err'); }
 document.addEventListener('focusout', () => setTimeout(() => {

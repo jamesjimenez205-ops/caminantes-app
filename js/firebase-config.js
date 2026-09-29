@@ -1,11 +1,12 @@
 // Configuración de Firebase (modo nube, datos compartidos en tiempo real).
-// Déjalo en null para usar la app en modo local (datos solo en este navegador).
-// Para activar la nube sigue docs/FIREBASE.md y pega aquí el objeto de configuración de tu app web, así:
-//
-// const FIREBASE_CONFIG = {
-//   apiKey: '...', authDomain: '...firebaseapp.com', projectId: '...',
-//   storageBucket: '...', messagingSenderId: '...', appId: '...',
-// };
-//
-// Estos valores no son secretos: la seguridad la dan el inicio de sesión y las reglas de Firestore.
-const FIREBASE_CONFIG = null;
+// Estos valores no son secretos: la seguridad la dan el inicio de sesión (solo cuentas creadas a mano,
+// registro desactivado) y las reglas de Firestore (firestore.rules). Ver docs/FIREBASE.md.
+// Para volver al modo local (datos solo en el navegador) deja: const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCadfbZyDO3ZDf-z1dH1lzWqTFS5I3w3gE',
+  authDomain: 'caminantes-grupo.firebaseapp.com',
+  projectId: 'caminantes-grupo',
+  storageBucket: 'caminantes-grupo.firebasestorage.app',
+  messagingSenderId: '944344769831',
+  appId: '1:944344769831:web:c2b4753c6ebab1df6c3502',
+};

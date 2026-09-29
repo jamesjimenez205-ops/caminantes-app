@@ -184,16 +184,37 @@ const Store = {
       a.photoIds.push(id);
     }
     await DB.put('activities', a);
-    // Sincroniza el progreso: retira lo que esta actividad marcó antes y marca lo actual.
+    await this.reload();
+    await this.syncActivityProgress(a.badgeId);
+    if (prev && prev.badgeId !== a.badgeId) await this.syncActivityProgress(prev.badgeId);
+  },
+  // Cada Caminante suma «Actividad 1..4» de la insignia según a cuántas actividades de ella asistió (por fecha).
+  // Solo toca los avances creados automáticamente (con activityId); lo marcado a mano se respeta.
+  async syncActivityProgress(badgeId) {
+    const b = this.badge(badgeId);
+    if (!b) return;
+    const slots = b.requirements.map(r => ({ id: r.id, n: +(/^Actividad\s+(\d+)$/i.exec(r.text)?.[1] || 0) })).filter(x => x.n).sort((x, y) => x.n - y.n);
+    if (!slots.length) return;
     const all = await DB.all('completions');
-    const mine = new Set(all.filter(c => c.activityId === a.id).map(c => c.id));
-    for (const id of mine) await DB.del('completions', id);
-    const existing = new Set(all.filter(c => !mine.has(c.id)).map(c => c.id));
-    for (const sid of a.scoutIds) for (const rid of a.reqIds) {
-      const id = sid + '_' + rid;
-      if (!existing.has(id)) await DB.put('completions', { id, scoutId: sid, badgeId: a.badgeId, reqId: rid, activityId: a.id, date: a.date });
+    const auto = all.filter(c => c.badgeId === badgeId && c.activityId);
+    for (const c of auto) await DB.del('completions', c.id);
+    const taken = new Set(all.filter(c => !(c.badgeId === badgeId && c.activityId)).map(c => c.id));
+    const acts = S.activities.filter(x => x.badgeId === badgeId).slice()
+      .sort((x, y) => x.date.localeCompare(y.date) || x.createdAt - y.createdAt);
+    for (const sc of S.scouts) {
+      const mine = acts.filter(x => x.scoutIds.includes(sc.id));
+      for (let i = 0; i < Math.min(slots.length, mine.length); i++) {
+        const id = sc.id + '_' + slots[i].id;
+        if (!taken.has(id)) await DB.put('completions', { id, scoutId: sc.id, badgeId, reqId: slots[i].id, activityId: mine[i].id, date: mine[i].date });
+      }
     }
     await this.reload();
+  },
+  // Número de la actividad dentro de su insignia (1.ª, 2.ª… por fecha)
+  actNumber(a) {
+    const same = S.activities.filter(x => x.badgeId === a.badgeId).slice()
+      .sort((x, y) => x.date.localeCompare(y.date) || x.createdAt - y.createdAt);
+    return same.findIndex(x => x.id === a.id) + 1;
   },
   async deleteActivity(id) {
     const a = this.activity(id);
@@ -201,6 +222,7 @@ const Store = {
     for (const c of S.completions.filter(c => c.activityId === id)) await DB.del('completions', c.id);
     await DB.del('activities', id);
     await this.reload();
+    await this.syncActivityProgress(a.badgeId);
   },
   filterActivities({ from, to, scoutId, badgeId } = {}) {
     return S.activities.filter(a =>
@@ -214,7 +236,6 @@ const Store = {
     if (!a.photoIds.length) r.push({ k: 'photos', t: 'Faltan fotografías' });
     if ((a.description || '').trim().length < 15) r.push({ k: 'desc', t: 'Falta describir la actividad' });
     if (!a.scoutIds.length) r.push({ k: 'people', t: 'Sin participantes' });
-    if (!a.reqIds.length) r.push({ k: 'reqs', t: 'Sin requisitos asociados' });
     return r;
   },
   reminders() { return S.activities.map(a => ({ a, issues: this.issues(a) })).filter(x => x.issues.length); },

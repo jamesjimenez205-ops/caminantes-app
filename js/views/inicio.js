@@ -9,7 +9,8 @@ function activityCard(a) {
     <div class="cover">${a.photoIds[0] ? `<img data-photo="${a.photoIds[0]}" alt="">` : `<div class="cover-empty">${icon('camera')}<span>Sin fotografías</span></div>`}
       ${a.photoIds.length > 1 ? `<span class="count">${icon('camera')} ${a.photoIds.length}</span>` : ''}</div>
     <div class="body">
-      <div class="meta"><span>${fmtDate(a.date)}</span>${b ? `<span class="chip" style="--c:${b.color}">${esc(b.name)}</span>` : ''}</div>
+      <div class="meta"><span>${fmtDate(a.date)}</span>${b ? `<span class="chip" style="--c:${b.color}">${esc(b.name)}</span>` : ''}<span class="num">Actividad n.º ${Store.actNumber(a)}</span></div>
+      <h3 class="act-title">${esc(a.title || (a.description || '').slice(0, 60) || 'Actividad')}</h3>
       <p class="desc">${esc(a.description) || '<em>Sin descripción</em>'}</p>
       <div class="foot">
         <span class="avatars">${people.slice(0, 5).map(s => avatar(s.name, 'sm')).join('')}${people.length > 5 ? `<span class="avatar sm more">+${people.length - 5}</span>` : ''}</span>

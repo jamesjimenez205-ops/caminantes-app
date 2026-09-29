@@ -134,6 +134,7 @@ const V = (() => {
       badgeId: id(o.badgeId, 'badge', 'Insignia'),
       reqIds: unique(arr(o.reqIds ?? [], 30, 'reqs', 'Requisitos').map(x => id(x, 'reqs'))),
       scoutIds: unique(arr(o.scoutIds ?? [], 200, 'people', 'Participantes').map(x => id(x, 'people'))),
+      title: text(o.title, { field: 'title', label: 'Nombre de la actividad', min: 2, max: 80, required: true }),
       description: text(o.description, { field: 'desc', label: 'Descripción', max: 2000, multiline: true }),
       photoIds: unique(arr(o.photoIds ?? [], 20, 'files', 'Fotos').map(x => id(x, 'files'))),
       createdAt: Number.isFinite(o.createdAt) ? o.createdAt : undefined,
@@ -191,7 +192,8 @@ const V = (() => {
     const ctx = context(scouts, badges);
     const specifics = (d.specifics || []).map(o => specific(o, ctx));
     if (!specifics.every(s => s.id)) fail('file', 'Competencias sin id');
-    const activities = d.activities.map(o => activity(o, ctx));
+    // respaldos anteriores no traían nombre de actividad: se toma del inicio de la descripción
+    const activities = d.activities.map(o => activity({ ...o, title: o.title || String(o.description || '').slice(0, 60) || 'Actividad' }, ctx));
     if (!activities.every(a => a.id && a.createdAt)) fail('file', 'Actividades sin id o fecha de creación');
     const completions = (d.completions || []).map(o => completion(o, ctx));
     const photos = arr(d.photos || [], LIMITS.photos, 'file', 'Fotos').map(p => {

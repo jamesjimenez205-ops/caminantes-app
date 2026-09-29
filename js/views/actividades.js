@@ -21,14 +21,12 @@ Actions['view-activity'] = d => {
   if (!a) return;
   const b = Store.badge(a.badgeId);
   const people = a.scoutIds.map(Store.scout).filter(Boolean);
-  const reqs = (b?.requirements || []).filter(r => a.reqIds.includes(r.id));
   const issues = Store.issues(a);
   openModal(`
-    <header class="modal-head"><div><p class="eyebrow dark">${fmtDate(a.date, true)}</p><h2>${b ? esc(b.name) : 'Actividad'}</h2></div><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
+    <header class="modal-head"><div><p class="eyebrow dark">${fmtDate(a.date, true)} · ${b ? esc(b.name) : ''} · Actividad n.º ${Store.actNumber(a)}</p><h2>${esc(a.title || 'Actividad')}</h2></div><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
     <div class="modal-body">
       ${issues.length ? `<div class="alert">${icon('alert')}<span>${issues.map(i => i.t).join(' · ')}</span></div>` : ''}
       <p class="full-desc">${esc(a.description) || '<em>Sin descripción</em>'}</p>
-      ${reqs.length ? `<h4>Requisitos trabajados</h4><ul class="plain">${reqs.map(r => `<li>${icon('check')} ${esc(r.text)}</li>`).join('')}</ul>` : ''}
       <h4>Participantes (${people.length})</h4>
       <div class="chips">${people.map(s => `<span class="chip-person">${avatar(s.name, 'sm')}${esc(s.name)}</span>`).join('') || '<span class="muted">Ninguno</span>'}</div>
       <h4>Fotografías (${a.photoIds.length})</h4>
@@ -44,12 +42,12 @@ Actions['del-activity'] = async d => {
   await Store.deleteActivity(d.id); closeModal(); toast('Actividad eliminada'); rerender();
 };
 
-// ---------- Formulario: insignia → requisitos → participantes → qué hicieron → fotos → guardar
+// ---------- Formulario: insignia → participantes → nombre → qué hicieron → fotos → guardar (el n.º se cuenta solo)
 const ActForm = {
   open(id) {
     if (!S.scouts.length) { toast('Primero agrega al menos un Caminante', 'err'); location.hash = '#/caminantes'; return; }
     const ex = id ? Store.activity(id) : null;
-    const st = { badgeId: ex?.badgeId || '', reqIds: new Set(ex?.reqIds || []), scoutIds: new Set(ex?.scoutIds || []), files: [], keep: [...(ex?.photoIds || [])], removed: [] };
+    const st = { badgeId: ex?.badgeId || '', scoutIds: new Set(ex?.scoutIds || []), files: [], keep: [...(ex?.photoIds || [])], removed: [] };
     openModal(`<form id="actform" novalidate>
       <header class="modal-head"><h2>${ex ? 'Editar actividad' : 'Nueva actividad'}</h2>
         <label class="date-field">${icon('calendar')}<input type="date" name="date" value="${ex?.date || today()}" required aria-label="Fecha" min="2000-01-01"></label>
@@ -57,10 +55,11 @@ const ActForm = {
       <div class="modal-body">
         <div class="field" id="f-badge"><div class="lbl"><b>1</b> Insignia relacionada</div>
           <div class="badge-pick">${S.badges.map(b => `<label class="pick" style="--c:${b.color}"><input type="radio" name="badge" value="${b.id}" ${st.badgeId === b.id ? 'checked' : ''}><span>${patch(b, 'sm')}<em>${esc(b.name)}</em></span></label>`).join('')}</div></div>
-        <div class="field" id="reqbox" hidden></div>
         <div class="field" id="f-people"><div class="lbl"><b>2</b> Participantes <span class="grow"></span><button type="button" class="link" id="p-all">Todos</button><button type="button" class="link" id="p-none">Ninguno</button></div>
           <div class="people-pick">${S.scouts.map(s => `<label class="pp"><input type="checkbox" value="${s.id}" ${st.scoutIds.has(s.id) ? 'checked' : ''}><span>${avatar(s.name, 'sm')}${esc(s.name)}</span></label>`).join('')}</div></div>
-        <div class="field"><label class="lbl" for="ad"><b>3</b> ¿Qué hicieron?</label>
+        <div class="field"><label class="lbl" for="at"><b>3</b> Nombre de la actividad <small id="anum"></small></label>
+          <input id="at" name="title" maxlength="80" required autocomplete="off" placeholder="Ej.: Taller de robótica" value="${esc(ex?.title || (ex?.description || '').slice(0, 60))}"></div>
+        <div class="field"><label class="lbl" for="ad">¿Qué hicieron? <small>(opcional pero recomendado)</small></label>
           <textarea id="ad" name="desc" rows="4" maxlength="2000" placeholder="Ej.: Caminata de 6 km al cerro; usaron brújula para orientar la ruta y armaron el campamento base.">${esc(ex?.description || '')}</textarea></div>
         <div class="field"><div class="lbl"><b>4</b> Fotografías</div>
           <label class="drop">${icon('camera')}<span>Agregar fotos</span><input type="file" id="files" name="files" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
@@ -71,24 +70,26 @@ const ActForm = {
   },
 
   mount(m, st, ex) {
-    const reqbox = $('#reqbox', m), thumbs = $('#thumbs', m), hint = $('#hint', m);
+    const thumbs = $('#thumbs', m), hint = $('#hint', m);
 
-    const renderReqs = () => {
-      const b = Store.badge(st.badgeId);
-      reqbox.hidden = !b;
-      if (!b) return;
-      reqbox.innerHTML = `<div class="lbl">Requisitos trabajados <small>(marcan avance a los participantes)</small></div>
-        <ul class="checklist compact">${b.requirements.map(r => `<li><label><input type="checkbox" value="${r.id}" ${st.reqIds.has(r.id) ? 'checked' : ''}><span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}</span></label></li>`).join('')}</ul>`;
+    // «Será la actividad n.° X de esta insignia»: se cuenta sola, por fecha.
+    const showNum = () => {
+      const el = $('#anum', m), b = Store.badge(st.badgeId);
+      if (!b) { el.textContent = ''; return; }
+      const date = $('input[name=date]', m).value || today();
+      const n = ex && ex.badgeId === st.badgeId ? Store.actNumber(ex)
+        : S.activities.filter(x => x.badgeId === st.badgeId && x.date <= date).length + 1;
+      el.textContent = `· será la Actividad n.º ${n} de ${b.name}`;
     };
     const renderThumbs = () => {
       thumbs.innerHTML = st.keep.map(id => `<div class="th"><img data-photo="${id}" alt=""><button type="button" data-keep="${id}" aria-label="Quitar foto">${icon('x')}</button></div>`).join('')
         + st.files.map((f, i) => `<div class="th"><img src="${URL.createObjectURL(f)}" alt=""><button type="button" data-new="${i}" aria-label="Quitar foto">${icon('x')}</button></div>`).join('');
       hydratePhotos(thumbs);
     };
-    renderReqs(); renderThumbs();
+    renderThumbs(); showNum();
+    $('input[name=date]', m).addEventListener('change', showNum);
 
-    $('#f-badge', m).addEventListener('change', e => { st.badgeId = e.target.value; st.reqIds.clear(); renderReqs(); });
-    reqbox.addEventListener('change', e => { e.target.checked ? st.reqIds.add(e.target.value) : st.reqIds.delete(e.target.value); });
+    $('#f-badge', m).addEventListener('change', e => { st.badgeId = e.target.value; showNum(); });
     const people = $$('#f-people input', m);
     people.forEach(i => i.addEventListener('change', () => { i.checked ? st.scoutIds.add(i.value) : st.scoutIds.delete(i.value); }));
     const setAll = v => people.forEach(i => { i.checked = v; v ? st.scoutIds.add(i.value) : st.scoutIds.delete(i.value); });
@@ -119,11 +120,11 @@ const ActForm = {
       const btn = $('#save', m); btn.disabled = true; btn.textContent = 'Guardando…';
       try {
         await Store.saveActivity({
-          ...(ex || {}), date: f.get('date'), badgeId: st.badgeId, reqIds: [...st.reqIds], scoutIds: [...st.scoutIds],
-          description: f.get('desc'), photoIds: [...st.keep],
+          ...(ex || {}), date: f.get('date'), badgeId: st.badgeId, reqIds: [], scoutIds: [...st.scoutIds],
+          title: f.get('title'), description: f.get('desc'), photoIds: [...st.keep],
         }, st.files, st.removed);
         closeModal();
-        toast(st.reqIds.size ? 'Actividad guardada · progreso actualizado' : 'Actividad guardada');
+        toast('Actividad guardada · progreso actualizado');
         rerender();
       } catch (err) {
         btn.disabled = false; btn.textContent = 'Guardar actividad';

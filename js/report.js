@@ -91,11 +91,10 @@ const Report = {
       doc.setFillColor(...(b ? [...(b.color.match(/\w\w/g).map(h => parseInt(h, 16)))] : LEAF)); doc.rect(M, y - 4, 1.6, 8, 'F');
       txt(fd(a.date), M + 4, y, { size: 11, bold: true }); if (b) txt(b.name, M + 4 + doc.getTextWidth(fd(a.date)) + 5, y, { size: 10, color: MUTED });
       y += 6;
+      para(`Actividad n.º ${Store.actNumber(a)}: ${a.title || (a.description || '').slice(0, 60)}`, M + 4, CW - 4, { size: 10.5, bold: true });
       const names = a.scoutIds.map(id => Store.scout(id)?.name).filter(Boolean).join(', ');
       para(`Participantes: ${names || '—'}`, M + 4, CW - 4, { size: 9, color: MUTED });
       if (a.description) para(a.description, M + 4, CW - 4, { size: 10 });
-      const reqs = (b?.requirements || []).filter(r => a.reqIds.includes(r.id));
-      if (reqs.length) para('Requisitos: ' + reqs.map(r => r.text).join('; '), M + 4, CW - 4, { size: 9, color: MUTED });
       if (f.photos && a.photoIds.length) {
         y += 2;
         for (let i = 0; i < a.photoIds.length; i += cols) {

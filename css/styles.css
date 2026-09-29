@@ -337,3 +337,7 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .section-card b { font-family: var(--serif); color: var(--forest); } .section-card small { color: var(--muted); }
 .section-card.on { border-color: var(--c); } .section-card:disabled { opacity: .6; cursor: not-allowed; }
 @media (max-width: 760px) { .section-bar .btn { padding: 8px 10px; font-size: .85rem; } }
+
+.act-title { font-size: 1.05rem; line-height: 1.25; }
+.meta .num { font-weight: 700; color: var(--forest-2); }
+.lbl small#anum { color: var(--forest-2); font-weight: 600; }

@@ -1,5 +1,5 @@
 // Envoltorio mínimo de IndexedDB: un store por entidad, todos con keyPath "id".
-const DB = (() => {
+const LocalDB = (() => {
   const STORES = ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics'];
   let db;
   const wrap = req => new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
@@ -20,3 +20,4 @@ const DB = (() => {
     clear: s => wrap(os(s, 'readwrite').clear()),
   };
 })();
+let DB = LocalDB; // cloud.js lo reemplaza por Firestore cuando hay configuración

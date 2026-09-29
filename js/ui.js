@@ -79,7 +79,11 @@ function openModal(html, { wide = false, onMount } = {}) {
   hydratePhotos(m);
   onMount && onMount(m);
 }
-function closeModal() { $('#modal-root').innerHTML = ''; document.body.classList.remove('noscroll'); }
+let PENDING_RENDER = false;
+function closeModal() {
+  $('#modal-root').innerHTML = ''; document.body.classList.remove('noscroll');
+  if (PENDING_RENDER) { PENDING_RENDER = false; setTimeout(() => render(true), 0); }
+}
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 let toastTimer;

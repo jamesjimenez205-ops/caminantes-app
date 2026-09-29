@@ -207,13 +207,17 @@ const V = (() => {
   }
 
   // ---- Acceso
+  function email(v) {
+    if (typeof v !== 'string' || v.length > 120 || !/^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,60}\.[A-Za-z]{2,24}$/.test(v.trim())) fail('u', 'Correo no válido');
+    return v.trim().toLowerCase();
+  }
   function login(u, p) {
     if (typeof u !== 'string' || !/^[A-Za-z0-9._-]{1,32}$/.test(u.trim())) fail('u', 'Usuario no válido');
     if (typeof p !== 'string' || p.length < 1 || p.length > 128) fail('p', 'Contraseña no válida');
     return [u.trim().toLowerCase(), p];
   }
 
-  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, LIMITS };
+  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, email, LIMITS };
 })();
 
 // Muestra un error de validación sobre el campo correspondiente del formulario. Devuelve true si era de validación.

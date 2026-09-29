@@ -37,6 +37,18 @@ function render(keepScroll) {
 }
 const rerender = () => render(true);
 
+// Cambios hechos por otra persona (tiempo real): se recarga sin pisar lo que se está escribiendo.
+function remoteChange() {
+  Store.reload().then(() => {
+    const busy = $('#modal-root').innerHTML.trim() || document.activeElement?.matches?.('input,textarea,select');
+    if (busy) PENDING_RENDER = true; else render(true);
+  });
+}
+function cloudError(e) { toast(e?.code === 'permission-denied' ? 'Sin permiso para guardar en la nube' : 'No se pudo sincronizar. Se reintentará al volver la conexión.', 'err'); }
+document.addEventListener('focusout', () => setTimeout(() => {
+  if (PENDING_RENDER && !$('#modal-root').innerHTML.trim() && !document.activeElement?.matches?.('input,textarea,select')) { PENDING_RENDER = false; render(true); }
+}, 150));
+
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (el && Object.hasOwn(Actions, el.dataset.act)) { e.preventDefault(); Actions[el.dataset.act](el.dataset, el); }
@@ -65,26 +77,29 @@ Actions['logout'] = () => Auth.logout();
 Actions['backup'] = () => openModal(`
   <header class="modal-head"><h2>Respaldo de datos</h2><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
   <div class="modal-body">
-    <p>Los datos viven en este navegador. Descarga un respaldo con regularidad y úsalo para pasar la información al otro dirigente.</p>
+    <p>${CLOUD ? 'Los datos están en la nube y se comparten en tiempo real entre las cuentas autorizadas. Descarga un respaldo de vez en cuando como copia de seguridad.' : 'Los datos viven en este navegador. Descarga un respaldo con regularidad y úsalo para pasar la información al otro dirigente.'}</p>
     <div class="backup-actions">
       <button class="btn primary" id="do-export">${icon('download')} Descargar respaldo</button>
       <label class="btn">${icon('save')} Restaurar respaldo<input type="file" id="do-import" accept="application/json" hidden></label>
     </div>
-    <p class="muted"><small>Restaurar reemplaza todo lo que hay ahora en este navegador.</small></p>
+    <p class="muted"><small>${CLOUD ? 'Restaurar reemplaza los datos compartidos: lo verán así todas las cuentas.' : 'Restaurar reemplaza todo lo que hay ahora en este navegador.'}</small></p>
   </div>`, {
   onMount: m => {
     $('#do-export', m).onclick = async () => { download(await Store.exportAll(), `respaldo-caminantes-${today()}.json`); toast('Respaldo descargado'); };
     $('#do-import', m).onchange = async e => {
       const f = e.target.files[0]; e.target.value = ''; if (!f) return;
       if (f.size > 400e6 || !/\.json$/i.test(f.name)) return toast('Elige un archivo de respaldo .json (máximo 400 MB)', 'err');
-      if (!confirm('Se reemplazarán TODOS los datos actuales por los del archivo. ¿Continuar?')) return;
+      if (!confirm(CLOUD ? 'Se reemplazarán TODOS los datos compartidos (para todas las cuentas) por los del archivo. ¿Continuar?' : 'Se reemplazarán TODOS los datos actuales por los del archivo. ¿Continuar?')) return;
       try { await Store.importAll(await f.text()); closeModal(); toast('Datos restaurados'); render(); }
       catch (err) { toast(err instanceof V.ValidationError ? err.message : 'Archivo no válido', 'err'); }
     };
   },
 });
 
-Auth.gate().then(() => Store.init()).then(() => render()).catch(err => {
+Cloud.boot().then(() => Auth.gate()).then(() => Store.init()).then(() => { if (CLOUD) { DB.onChange = remoteChange; Cloud.onError = cloudError; } render(); }).catch(err => {
   console.error(err);
-  $('#main').innerHTML = '<div class="page"><div class="card note">No se pudo abrir el almacenamiento del navegador. Si estás en modo privado, usa una ventana normal.</div></div>';
+  const denied = err?.code === 'permission-denied';
+  $('#main').innerHTML = `<div class="page"><div class="card note">${CLOUD
+    ? (denied ? 'Tu cuenta no tiene permiso para ver los datos del grupo. Pide que agreguen tu correo a las reglas de Firestore.' : 'No se pudo conectar con la nube. Revisa tu conexión a internet e intenta de nuevo.')
+    : 'No se pudo abrir el almacenamiento del navegador. Si estás en modo privado, usa una ventana normal.'}</div>${CLOUD ? '<p><button class="btn" data-act="logout">Cerrar sesión</button></p>' : ''}</div>`;
 });

@@ -12,13 +12,18 @@ const STATUS_LABEL = { done: 'Completada', prog: 'En progreso', pend: 'Sin inici
 const blobToDataURL = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
 
 // Reduce una imagen (File/Blob) a JPEG con lado máximo `max`.
-async function resizeImage(file, max = 1600, quality = 0.82) {
+async function resizeImage(file, max = 1400, quality = 0.8, limit = 650 * 1024) {
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  return new Promise(res => c.toBlob(res, 'image/jpeg', quality));
+  let blob;
+  for (const [side, q] of [[max, quality], [max, 0.68], [1100, 0.65], [900, 0.6], [700, 0.55]]) {
+    const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    blob = await new Promise(res => c.toBlob(res, 'image/jpeg', q));
+    if (blob.size <= limit) break; // cabe con margen en un documento de Firestore (1 MB en base64)
+  }
+  return blob;
 }
 
 const Store = {

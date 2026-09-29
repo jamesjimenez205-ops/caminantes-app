@@ -12,11 +12,40 @@ const Auth = (() => {
   }
 
   return {
-    isOpen: () => { try { return sessionStorage.getItem(SESSION) === '1'; } catch { return false; } },
-    logout() { try { sessionStorage.removeItem(SESSION); } catch { /* nada */ } location.reload(); },
+    isOpen: () => (CLOUD ? !!Cloud.user() : (() => { try { return sessionStorage.getItem(SESSION) === '1'; } catch { return false; } })()),
+    logout() {
+      if (CLOUD) return Cloud.signOut().then(() => location.reload());
+      try { sessionStorage.removeItem(SESSION); } catch { /* nada */ } location.reload();
+    },
+    async gateCloud() {
+      return new Promise(resolve => {
+        const el = document.createElement('div');
+        el.id = 'auth';
+        el.innerHTML = `<div class="auth-card"><img class="group-logo" src="${GROUP.logo}" alt="Logo del grupo">
+          <h1>${GROUP.name}</h1><p class="muted">${GROUP.tagline} · Progreso de las secciones</p>
+          <form id="af"><label>Correo<input name="u" type="email" autocomplete="username" autocapitalize="none" required autofocus maxlength="120"></label>
+          <label>Contraseña<input name="p" type="password" autocomplete="current-password" required maxlength="128"></label>
+          <p class="auth-err" id="ae"></p><button class="btn primary big">Entrar</button></form></div>`;
+        document.body.appendChild(el);
+        const err = m => (el.querySelector('#ae').textContent = m);
+        el.querySelector('#af').addEventListener('submit', async e => {
+          e.preventDefault();
+          const f = new FormData(e.target), btn = e.target.querySelector('button');
+          let mail; try { mail = V.email(f.get('u')); if (!f.get('p') || f.get('p').length > 128) throw new Error(); } catch { return err('Correo o contraseña no válidos'); }
+          btn.disabled = true; err('');
+          try { await Cloud.signIn(mail, f.get('p')); el.remove(); resolve(); }
+          catch (er) {
+            const m = { 'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.', 'auth/network-request-failed': 'Sin conexión a internet.' };
+            err(m[er.code] || 'Correo o contraseña incorrectos');
+            btn.disabled = false;
+          }
+        });
+      });
+    },
 
     gate() {
       if (this.isOpen()) return Promise.resolve();
+      if (CLOUD) return this.gateCloud();
       return new Promise(resolve => {
         const el = document.createElement('div');
         el.id = 'auth';

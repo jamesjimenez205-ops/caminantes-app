@@ -8,7 +8,7 @@ const SECTIONS = {
     id: 'caminantes', name: 'Comunidad de Caminantes', short: 'Caminantes', people: 'Caminantes', person: 'Caminante', ages: '15 a 18 años',
     motto: 'Trazando Rumbos', logo: 'assets/insignia.png', accent: '#1c4a9a', enabled: true,
     features: { stages: true, specifics: true, honor: true, attendance: true },
-    stages: STAGES,
+    stages: STAGES, autoProgress: 'actividad',
     groups: [{ k: 'competencia', name: 'Competencias', one: 'Competencia', color: '#1c4a9a', icon: 'compass' }],
     seed: SEED_BADGES,
   },
@@ -16,7 +16,7 @@ const SECTIONS = {
     id: 'unidad', name: 'Unidad Scout', short: 'Unidad', people: 'Scouts', person: 'Scout', ages: '11 a 15 años',
     motto: '', logo: 'assets/unidad.png', accent: '#3f9a52', enabled: true,
     features: { stages: true, specifics: false, honor: false, attendance: true },
-    stages: UNIT_STAGES,
+    stages: UNIT_STAGES, autoProgress: 'todos',
     groups: [
       { k: 'destreza', name: 'Destrezas', one: 'Destreza', color: '#3f9a52', icon: 'award' },
       { k: 'segmento', name: 'Segmentos', one: 'Segmento', color: '#d9a21b', icon: 'star' },

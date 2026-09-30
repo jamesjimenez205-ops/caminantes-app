@@ -36,6 +36,7 @@ const Store = {
     this.section = id; try { localStorage.setItem('caminantes-seccion', id); } catch { /* nada */ }
     await this.reload();
     if (!S.badges.length) { for (const b of SECTIONS[id].seed) await DB.put('badges', b); await this.reload(); }
+    await this.syncAllActivityProgress();
   },
   async init() {
     try { const s = localStorage.getItem('caminantes-seccion'); if (s && Object.hasOwn(SECTIONS, s) && SECTIONS[s].enabled) this.section = s; } catch { /* nada */ }
@@ -81,6 +82,7 @@ const Store = {
       if (b && seed.image && !b.image && !b.photoId) await DB.put('badges', { ...b, image: seed.image });
     }
     await this.reload();
+    await this.syncAllActivityProgress();
     const OLD = { a1: '#3f6b6b', a2: '#5f8f3e', a3: '#8a5a34', a4: '#a3743f', a5: '#2d5a3d' };
     for (const b of S.badges) {
       if (OLD[b.id] === b.color) await DB.put('badges', { ...b, color: SEED_BADGES.find(x => x.id === b.id).color });
@@ -194,6 +196,7 @@ const Store = {
     Object.assign(b, V.badge(b));
     await this._setPhoto(b, cur.photoId, opts, 320);
     await DB.put('badges', b); await this.reload();
+    await this.syncActivityProgress(b.id);
   },
 
   // ---- Progreso
@@ -246,27 +249,38 @@ const Store = {
     await this.syncActivityProgress(a.badgeId);
     if (prev && prev.badgeId !== a.badgeId) await this.syncActivityProgress(prev.badgeId);
   },
-  // Cada Caminante suma «Actividad 1..4» de la insignia según a cuántas actividades de ella asistió (por fecha).
-  // Solo toca los avances creados automáticamente (con activityId); lo marcado a mano se respeta.
+  // Progreso automático por asistencia a actividades. Cada Caminante/Scout suma un requisito por cada actividad de la
+  // insignia a la que asistió (contadas por fecha): la 1.ª actividad marca el 1.er requisito, la 2.ª el 2.º, etc.
+  //  · Caminantes: solo los requisitos «Actividad 1, 2, 3» (proyecto final e informe se marcan a mano).
+  //  · Unidad: todos los requisitos de la insignia, en su orden (pueden ser 1 o varios según la insignia).
+  // Solo toca los avances creados automáticamente (con activityId) y solo escribe lo que cambió; lo marcado a mano se respeta.
   async syncActivityProgress(badgeId) {
     const b = this.badge(badgeId);
     if (!b) return;
-    const slots = b.requirements.map(r => ({ id: r.id, n: +(/^Actividad\s+(\d+)$/i.exec(r.text)?.[1] || 0) })).filter(x => x.n).sort((x, y) => x.n - y.n);
-    if (!slots.length) return;
+    let slots = b.requirements.map(r => r.id);
+    if (SECTIONS[this.section].autoProgress !== 'todos') {
+      slots = b.requirements.map(r => ({ id: r.id, n: +(/^Actividad\s+(\d+)$/i.exec(r.text)?.[1] || 0) })).filter(x => x.n).sort((x, y) => x.n - y.n).map(x => x.id);
+    }
     const all = await DB.all('completions');
-    const auto = all.filter(c => c.badgeId === badgeId && c.activityId);
-    for (const c of auto) await DB.del('completions', c.id);
+    const current = new Map(all.filter(c => c.badgeId === badgeId && c.activityId).map(c => [c.id, c]));
     const taken = new Set(all.filter(c => !(c.badgeId === badgeId && c.activityId)).map(c => c.id));
     const acts = S.activities.filter(x => x.badgeId === badgeId).slice()
       .sort((x, y) => x.date.localeCompare(y.date) || x.createdAt - y.createdAt);
+    const want = new Map();
     for (const sc of S.scouts) {
       const mine = acts.filter(x => x.scoutIds.includes(sc.id));
       for (let i = 0; i < Math.min(slots.length, mine.length); i++) {
-        const id = sc.id + '_' + slots[i].id;
-        if (!taken.has(id)) await DB.put('completions', { id, scoutId: sc.id, badgeId, reqId: slots[i].id, activityId: mine[i].id, date: mine[i].date });
+        const id = sc.id + '_' + slots[i];
+        if (!taken.has(id)) want.set(id, { id, scoutId: sc.id, badgeId, reqId: slots[i], activityId: mine[i].id, date: mine[i].date });
       }
     }
-    await this.reload();
+    let changed = false;
+    for (const [id] of current) if (!want.has(id)) { await DB.del('completions', id); changed = true; }
+    for (const [id, c] of want) if (current.get(id)?.activityId !== c.activityId) { await DB.put('completions', c); changed = true; }
+    if (changed) await this.reload();
+  },
+  async syncAllActivityProgress() {
+    for (const b of [...S.badges]) if (S.activities.some(a => a.badgeId === b.id)) await this.syncActivityProgress(b.id);
   },
   // Número de la actividad dentro de su insignia (1.ª, 2.ª… por fecha)
   actNumber(a) {

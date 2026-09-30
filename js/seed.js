@@ -79,7 +79,7 @@ const UNIT_SEED = [...UNIT_DESTREZAS].sort((a, b) => a.localeCompare(b, 'es')).m
 // Etapas de progresión de Unidad (Dirección Nacional de Programa · El Cómo para el Dirigente de Sección Media).
 // Se entregan con el Consejo de Patrulla, con acuerdo del dirigente encargado del seguimiento.
 const UNIT_STAGES = [
-  { k: 'pista', name: 'Pista', age: '11 a 13 años', desc: 'Cuando el joven o la joven comienza a trabajar con los objetivos personales correspondientes a las edades de 11 a 13 años.' },
+  { k: 'pista', name: 'Pista', age: '11 a 12 años', desc: 'Cuando el joven o la joven comienza a trabajar con los objetivos personales correspondientes a las edades de 11 a 12 años.' },
   { k: 'senda', name: 'Senda', age: '12 a 13 años', desc: 'Cuando ha alcanzado aproximadamente la mitad de los objetivos para las edades de 12 a 13 años.' },
   { k: 'rumbo', name: 'Rumbo', age: '13 a 14 años', desc: 'Desde que ha alcanzado la totalidad, poco más o poco menos, de los objetivos personales para las edades de 13 a 14 años.' },
   { k: 'travesia', name: 'Travesía', age: '14 a 15 años', desc: 'En el momento en que ha logrado desarrollar con éxito al menos la mitad de los objetivos personales para las edades de 14 a 15 años.' },

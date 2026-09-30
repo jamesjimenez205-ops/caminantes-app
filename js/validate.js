@@ -159,6 +159,47 @@ const V = (() => {
     }
     return out;
   }
+  // Labor social: un registro puede tener varios participantes; las horas son POR participante.
+  function hoursVal(v) {
+    const n = typeof v === 'string' ? Number(v.trim().replace(',', '.')) : v;
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0.25 || n > 24) fail('hours', 'Horas: entre 0.25 y 24');
+    if (Math.abs(n * 4 - Math.round(n * 4)) > 1e-9) fail('hours', 'Horas: usa múltiplos de 0.25 (15 minutos)');
+    return n;
+  }
+  function service(o, ctx) {
+    obj(o, 'place', 'Labor social');
+    const scoutIds = unique(arr(o.scoutIds ?? [], 200, 'people', 'Participantes').map(x => id(x, 'people', 'Participante')));
+    if (!scoutIds.length) fail('people', 'Elige al menos un participante');
+    const kind = o.certKind || '';
+    if (!['', 'image', 'pdf'].includes(kind)) fail('cert', 'Tipo de certificado no válido');
+    const out = {
+      id: optId(o.id, 'id') || undefined, section: sec(o.section), scoutIds,
+      date: date(o.date, { field: 'date', label: 'Fecha', required: true }), hours: hoursVal(o.hours),
+      place: text(o.place, { field: 'place', label: 'Lugar', min: 2, max: 100, required: true }),
+      description: text(o.description, { field: 'description', label: 'Descripción', max: 1000, multiline: true }),
+      evidenceIds: unique(arr(o.evidenceIds ?? [], 6, 'evidence', 'Evidencia').map(x => id(x, 'evidence', 'Evidencia'))),
+      certificateId: optId(o.certificateId, 'cert') || '', certKind: kind,
+      createdAt: Number.isFinite(o.createdAt) ? o.createdAt : undefined,
+    };
+    if (out.certificateId && !out.certKind) fail('cert', 'Falta el tipo de certificado');
+    if (ctx && scoutIds.some(s => !ctx.scouts.has(s))) fail('people', 'Participante inexistente');
+    return out;
+  }
+  // Certificado: imagen o PDF (el PDF debe caber en un documento de la nube: máx. 680 KB)
+  const PDF_MAX = 680 * 1024;
+  async function certificate(file) {
+    const nm = String(file?.name || 'archivo').slice(0, 40);
+    if (!(file instanceof Blob)) fail('cert', 'Archivo no válido');
+    const h = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    if (h[0] === 0x25 && h[1] === 0x50 && h[2] === 0x44 && h[3] === 0x46) { // %PDF
+      if (file.type !== 'application/pdf') fail('cert', `«${nm}»: tipo de archivo no válido`);
+      if (file.size > PDF_MAX) fail('cert', `«${nm}»: el PDF pesa más de 680 KB. Comprímelo o sube una foto del certificado.`);
+      return 'pdf';
+    }
+    try { await image(file); } catch (e) { if (e instanceof ValidationError) fail('cert', `«${nm}»: sube una imagen (JPG, PNG o WebP) o un PDF válido`); throw e; }
+    return 'image';
+  }
+
   // Asistencia de una reunión: un documento por fecha; records = { idCaminante: 'P' | 'A' | 'J' }
   function attendance(o, ctx) {
     obj(o, 'date', 'Asistencia');
@@ -192,7 +233,8 @@ const V = (() => {
   const MIME_OK = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const magicOf = h => (h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff ? 'image/jpeg'
     : h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47 ? 'image/png'
-    : h[0] === 0x52 && h[1] === 0x49 && h[2] === 0x46 && h[3] === 0x46 && h[8] === 0x57 && h[9] === 0x45 && h[10] === 0x42 && h[11] === 0x50 ? 'image/webp' : '');
+    : h[0] === 0x52 && h[1] === 0x49 && h[2] === 0x46 && h[3] === 0x46 && h[8] === 0x57 && h[9] === 0x45 && h[10] === 0x42 && h[11] === 0x50 ? 'image/webp'
+    : h[0] === 0x25 && h[1] === 0x50 && h[2] === 0x44 && h[3] === 0x46 ? 'application/pdf' : '');
   async function image(file, maxBytes = 15 * 1024 * 1024) {
     const nm = String(file?.name || 'archivo').slice(0, 40);
     if (!(file instanceof Blob)) fail('files', 'Archivo no válido');
@@ -208,8 +250,8 @@ const V = (() => {
   }
 
   // ---- Respaldo completo: reconstruye todo con lista blanca de campos
-  const LIMITS = { attendance: 3000, scouts: 500, badges: 30, completions: 30000, activities: 6000, specifics: 3000, photos: 3000 };
-  const PHOTO_RE = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+  const LIMITS = { service: 4000, attendance: 3000, scouts: 500, badges: 30, completions: 30000, activities: 6000, specifics: 3000, photos: 3000 };
+  const PHOTO_RE = /^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/;
   function backup(d) {
     obj(d, 'file', 'Archivo de respaldo');
     for (const k of Object.keys(LIMITS)) if (d[k] !== undefined) arr(d[k], LIMITS[k], 'file', `Respaldo (${k})`);
@@ -237,7 +279,9 @@ const V = (() => {
     activities.forEach(a => { a.photoIds = a.photoIds.filter(x => have.has(x)); });
     [...scouts, ...badges].forEach(o => { if (o.photoId && !have.has(o.photoId)) o.photoId = ''; });
     const attendanceList = (d.attendance ? arr(d.attendance, LIMITS.attendance, 'file', 'Asistencia') : []).map(o => attendance(o, ctx));
-    return { scouts, badges, specifics, activities, completions, photos, attendance: attendanceList };
+    const serviceList = (d.service ? arr(d.service, LIMITS.service, 'file', 'Labor social') : []).map(o => service(o, ctx));
+    serviceList.forEach(r => { r.evidenceIds = r.evidenceIds.filter(x => have.has(x)); if (r.certificateId && !have.has(r.certificateId)) { r.certificateId = ''; r.certKind = ''; } });
+    return { scouts, badges, specifics, activities, completions, photos, attendance: attendanceList, service: serviceList };
   }
 
   // ---- Acceso
@@ -251,7 +295,7 @@ const V = (() => {
     return [u.trim().toLowerCase(), p];
   }
 
-  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, email, attendance, LIMITS };
+  return { ValidationError, text, personName, id, optId, date, int, color, icon, scout, badge, specific, activity, completion, reqLines, image, backup, context, login, email, attendance, service, certificate, LIMITS };
 })();
 
 // Muestra un error de validación sobre el campo correspondiente del formulario. Devuelve true si era de validación.

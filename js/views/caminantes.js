@@ -59,6 +59,10 @@ Views.caminantes = {
     <p class="muted">Certificadas por un ente externo al movimiento scout; se acreditan dentro de un área de competencia.</p>
     ${S.specifics.filter(c => c.scoutId === id).length ? `<div class="card list">${S.specifics.filter(c => c.scoutId === id).map(c => { const b = Store.badge(c.badgeId); return `<div class="row"><span class="grow"><b>${esc(c.name)}</b><br><small class="muted">${esc(c.ente || 'Sin ente indicado')}${c.date ? ' · ' + fmtDate(c.date) : ''}</small></span>${b ? `<span class="chip" style="--c:${b.color}">${esc(b.name)}</span>` : ''}<button class="icon-btn" data-act="del-specific" data-id="${c.id}" aria-label="Quitar">${icon('trash')}</button></div>`; }).join('')}</div>` : '<p class="muted"><em>Ninguna registrada.</em></p>'}` : ''}
 
+    ${Sec().features.service ? `<div class="sec-head"><h2>Labor social</h2><a class="link" href="#/laborsocial" data-act="svc-open" data-scout="${id}">Ver registros</a></div>
+    <div class="card svc-sum"><b class="hrs-big">${fmtHours(Store.serviceHours(id))}</b><span class="muted"> acumuladas en ${plural(Store.serviceFor(id).length, 'registro', 'registros')}</span>
+      <button class="btn" data-act="svc-new" data-scout="${id}">${icon('plus')} Registrar horas</button></div>` : ''}
+
     <div class="sec-head"><h2>Actividades (${acts.length})</h2></div>
     ${acts.length ? `<div class="grid acts">${acts.map(activityCard).join('')}</div>` : '<p class="muted">Todavía no participó en actividades registradas.</p>'}`;
   },

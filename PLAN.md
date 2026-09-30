@@ -52,3 +52,6 @@ Las 5 áreas de competencia del manual 2019. Los requisitos de cada área vienen
 ## Fotos e imágenes
 - Cada Caminante/Scout puede tener foto de perfil (campo `photoId`, se guarda reducida en el almacén de fotos). Las insignias usan: foto propia (`photoId`) > imagen del proyecto (`image`, solo rutas `assets/…`) > ícono.
 - Las destrezas de Unidad traen su imagen recortada del documento DESTREZAS en `assets/destrezas/*.webp` (Electricista no tiene imagen en el documento).
+
+## Labor social
+Colección `service`: un registro por jornada con participantes (las horas cuentan por participante), fecha, horas (múltiplos de 0.25), lugar, descripción, evidencia (hasta 6 fotos) y certificado (imagen o PDF ≤ 680 KB, guardado en `photos`). Totales por Caminante/Scout en Labor social, en el perfil y en el PDF. **Requiere que las reglas de Firestore incluyan `'service'`** (ver `firestore.rules`).

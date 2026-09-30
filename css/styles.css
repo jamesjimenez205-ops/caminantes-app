@@ -398,3 +398,17 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 @media (max-width: 560px) { .qr-row { flex-direction: column; } }
 
 #badgeform .field > small.muted { display: block; margin-top: 8px; }
+
+/* ---- Labor social */
+.hrs-big { font: 700 1.15rem var(--serif); color: var(--forest); }
+.progress-table tr.sel td { background: #eef6ec; }
+.svc { padding: 16px 18px; }
+.svc-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.svc .hrs { background: var(--forest-2); color: #fff; font: 700 .95rem var(--sans); padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
+.svc-desc { margin: 10px 0 6px; white-space: pre-wrap; }
+.svc-people { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.svc-files { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.gallery.small { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; max-width: 420px; flex: 1; }
+.svc-sum { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .svc-sum .btn { margin-left: auto; }
+.field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .field.two { grid-template-columns: 1fr; } }

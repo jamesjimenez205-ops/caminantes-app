@@ -96,6 +96,31 @@ const Report = {
       y += 6;
     }
 
+    // Labor social
+    if (f.service !== false) {
+      const recs = S.service.filter(r => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!scout || r.scoutIds.includes(scout.id))).slice().reverse();
+      if (recs.length) {
+        ensure(24); txt('Labor social', M, y, { size: 14, bold: true, color: FOREST }); y += 3;
+        doc.setDrawColor(...LEAF); doc.setLineWidth(0.6); doc.line(M, y, M + 22, y); y += 7;
+        for (const s of (scout ? [scout] : S.scouts)) {
+          const h = Store.serviceHours(s.id, f); if (!h) continue;
+          ensure(7); txt(s.name, M + 4, y, { size: 9 });
+          txt(fmtHours(h) + '  ·  ' + plural(Store.serviceFor(s.id, f).length, 'registro', 'registros'), M + 100, y, { size: 9, bold: true }); y += 6;
+        }
+        y += 3;
+        for (const r of recs) {
+          ensure(16);
+          txt(`${fd(r.date)}  ·  ${r.place}  ·  ${fmtHours(r.hours)} por participante`, M + 4, y, { size: 9.5, bold: true }); y += 5;
+          const who = r.scoutIds.map(i => Store.scout(i)?.name).filter(Boolean).join(', ');
+          para(`Participantes: ${who || '—'}`, M + 4, CW - 4, { size: 9, color: MUTED });
+          if (r.description) para(r.description, M + 4, CW - 4, { size: 9 });
+          para(`Evidencia: ${r.evidenceIds.length ? plural(r.evidenceIds.length, 'foto', 'fotos') : 'sin fotos'} · Certificado: ${r.certificateId ? 'sí' : 'no'}`, M + 4, CW - 4, { size: 8.5, color: MUTED });
+          y += 3;
+        }
+        y += 4;
+      }
+    }
+
     // Actividades
     ensure(20); txt(`Actividades (${acts.length})`, M, y, { size: 14, bold: true, color: FOREST }); y += 3;
     doc.setDrawColor(...LEAF); doc.line(M, y, M + 22, y); y += 8;

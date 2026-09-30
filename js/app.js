@@ -1,7 +1,7 @@
 // Router por hash, navegación y acciones delegadas.
 const NAV = [
   ['inicio', 'Inicio', 'home'], ['caminantes', '', 'users'], ['insignias', 'Insignias', 'award'],
-  ['actividades', 'Actividades', 'calendar'], ['asistencia', 'Asistencia', 'clipboard', 'attendance'], ['progreso', 'Progreso', 'chart'], ['maximo-logro', 'Máximo logro', 'star', 'honor'], ['reportes', 'Reportes', 'file'],
+  ['actividades', 'Actividades', 'calendar'], ['asistencia', 'Asistencia', 'clipboard', 'attendance'], ['laborsocial', 'Labor social', 'heart', 'service'], ['progreso', 'Progreso', 'chart'], ['maximo-logro', 'Máximo logro', 'star', 'honor'], ['reportes', 'Reportes', 'file'],
 ];
 
 const route = () => { const [name, param] = (location.hash.replace(/^#\/?/, '') || 'inicio').split('/'); return { name: Object.hasOwn(Views, name) ? name : 'inicio', param: /^[A-Za-z0-9_-]{1,40}$/.test(param || '') ? param : undefined }; };

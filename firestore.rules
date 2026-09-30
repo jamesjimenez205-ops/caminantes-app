@@ -11,7 +11,7 @@ service cloud.firestore {
 
     match /{coleccion}/{doc} {
       allow read, write: if permitido()
-        && coleccion in ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance', 'photos'];
+        && coleccion in ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance', 'service', 'photos'];
     }
   }
 }

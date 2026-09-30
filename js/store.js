@@ -1,7 +1,7 @@
 // Estado en memoria + reglas de negocio. Las fotos (blobs) se leen bajo demanda.
 // S = datos de la sección activa; ALL = todo lo guardado (todas las secciones).
-const S = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [] };
-const ALL = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [] };
+const S = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [], service: [] };
+const ALL = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [], service: [] };
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -93,8 +93,9 @@ const Store = {
   async reload() {
     for (const k of Object.keys(ALL)) ALL[k] = await DB.all(k);
     const inSec = o => (o.section || 'caminantes') === this.section;
-    for (const k of ['scouts', 'badges', 'activities', 'specifics', 'attendance']) S[k] = ALL[k].filter(inSec);
+    for (const k of ['scouts', 'badges', 'activities', 'specifics', 'attendance', 'service']) S[k] = ALL[k].filter(inSec);
     S.attendance.sort((a, b) => b.date.localeCompare(a.date));
+    S.service.sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
     const mine = new Set(S.scouts.map(s => s.id));
     S.completions = ALL.completions.filter(c => mine.has(c.scoutId));
     S.badges.forEach(b => { if (!/^#[0-9a-f]{6}$/i.test(b.color)) b.color = '#1c4a9a'; if (!Object.hasOwn(ICONS, b.icon)) b.icon = 'compass'; }); // defensa al pintar
@@ -135,6 +136,12 @@ const Store = {
     for (const c of S.specifics.filter(c => c.scoutId === id)) await DB.del('specifics', c.id);
     for (const c of S.completions.filter(c => c.scoutId === id)) await DB.del('completions', c.id);
     for (const a of S.activities.filter(a => a.scoutIds.includes(id))) await DB.put('activities', { ...a, scoutIds: a.scoutIds.filter(x => x !== id) });
+    for (const r of S.service.filter(r => r.scoutIds.includes(id))) {
+      const rest = r.scoutIds.filter(x => x !== id);
+      if (rest.length) { await DB.put('service', { ...r, scoutIds: rest }); continue; }
+      for (const pid of [...r.evidenceIds, r.certificateId].filter(Boolean)) await DB.del('photos', pid);
+      await DB.del('service', r.id);
+    }
     for (const a of S.attendance.filter(a => id in a.records)) {
       const records = { ...a.records }; delete records[id];
       if (Object.keys(records).length) await DB.put('attendance', { ...a, records }); else await DB.del('attendance', a.id);
@@ -333,6 +340,40 @@ const Store = {
     return { P, A, J, total, pct: pct(P, total) };
   },
 
+  // ---- Labor social (horas de servicio por Caminante/Scout, con evidencia y certificado)
+  serviceFor(sid, { from, to } = {}) { return S.service.filter(r => r.scoutIds.includes(sid) && (!from || r.date >= from) && (!to || r.date <= to)); },
+  serviceHours(sid, range) { return Math.round(this.serviceFor(sid, range).reduce((n, r) => n + r.hours, 0) * 100) / 100; },
+  async saveService(input, { evidenceFiles = [], removeEvidence = [], certFile = null, removeCert = false } = {}) {
+    const a = V.service(input, V.context(S.scouts, S.badges));
+    const prev = a.id ? S.service.find(x => x.id === a.id) : null;
+    if (a.id && !prev) throw new V.ValidationError('id', 'Registro inexistente');
+    if (prev && a.evidenceIds.some(p => !prev.evidenceIds.includes(p))) throw new V.ValidationError('evidence', 'Evidencia no válida');
+    if (removeEvidence.some(p => !prev?.evidenceIds.includes(p))) throw new V.ValidationError('evidence', 'Evidencia no válida');
+    if (a.evidenceIds.length + evidenceFiles.length > 6) throw new V.ValidationError('evidence', 'Máximo 6 fotos de evidencia por registro');
+    for (const f of evidenceFiles) await V.image(f); // se valida todo antes de escribir nada
+    const certKind = certFile ? await V.certificate(certFile) : '';
+    if (!a.id) { a.id = uid(); a.createdAt = Date.now(); }
+    for (const pid of removeEvidence) await DB.del('photos', pid);
+    a.evidenceIds = a.evidenceIds.filter(x => !removeEvidence.includes(x));
+    for (const f of evidenceFiles) { const pid = uid(); await DB.put('photos', { id: pid, blob: await resizeImage(f) }); a.evidenceIds.push(pid); }
+    const oldCert = prev?.certificateId || '';
+    if (certFile) {
+      const cid = uid();
+      await DB.put('photos', { id: cid, blob: certKind === 'pdf' ? certFile : await resizeImage(certFile, 1600, 0.85) });
+      if (oldCert) await DB.del('photos', oldCert);
+      a.certificateId = cid; a.certKind = certKind;
+    } else if (removeCert && oldCert) { await DB.del('photos', oldCert); a.certificateId = ''; a.certKind = ''; }
+    else { a.certificateId = oldCert; a.certKind = prev?.certKind || ''; }
+    await DB.put('service', a); await this.reload();
+    return a;
+  },
+  async deleteService(id) {
+    const r = S.service.find(x => x.id === id);
+    if (!r) return;
+    for (const pid of [...r.evidenceIds, r.certificateId].filter(Boolean)) await DB.del('photos', pid);
+    await DB.del('service', id); await this.reload();
+  },
+
   // ---- Recordatorios
   issues(a) {
     const r = [];
@@ -358,7 +399,7 @@ const Store = {
     const photos = await DB.all('photos');
     return JSON.stringify({
       version: 1, exported: new Date().toISOString(),
-      scouts: ALL.scouts, badges: ALL.badges, completions: ALL.completions, activities: ALL.activities, specifics: ALL.specifics, attendance: ALL.attendance,
+      scouts: ALL.scouts, badges: ALL.badges, completions: ALL.completions, activities: ALL.activities, specifics: ALL.specifics, attendance: ALL.attendance, service: ALL.service,
       photos: await Promise.all(photos.map(async p => ({ id: p.id, data: await blobToDataURL(p.blob) }))),
     });
   },
@@ -370,10 +411,10 @@ const Store = {
     for (const p of d.photos) {
       const bin = atob(p.data.slice(p.data.indexOf(',') + 1));
       const blob = new Blob([Uint8Array.from(bin, c => c.charCodeAt(0))], { type: p.data.slice(5, p.data.indexOf(';')) });
-      try { photos.push({ id: p.id, blob: await resizeImage(blob) }); } catch { throw new V.ValidationError('file', 'Una de las fotos no se pudo leer como imagen'); }
+      try { photos.push({ id: p.id, blob: blob.type === 'application/pdf' ? blob : await resizeImage(blob) }); } catch { throw new V.ValidationError('file', 'Una de las fotos no se pudo leer como imagen'); }
     }
-    for (const s of ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics', 'attendance']) await DB.clear(s);
-    for (const s of ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance']) for (const o of d[s] || []) await DB.put(s, o);
+    for (const s of ['scouts', 'badges', 'completions', 'activities', 'photos', 'specifics', 'attendance', 'service']) await DB.clear(s);
+    for (const s of ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance', 'service']) for (const o of d[s] || []) await DB.put(s, o);
     for (const p of photos) await DB.put('photos', p);
     this._urls.clear();
     await this.reload();

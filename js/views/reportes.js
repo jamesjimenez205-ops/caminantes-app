@@ -26,6 +26,7 @@ Views.reportes = {
       </div>
       <div class="opts">
         <label class="check"><input type="checkbox" data-change="report-f" data-key="photos" ${r.photos ? 'checked' : ''}><span class="box">${icon('check')}</span>Incluir fotografías</label>
+        <label class="check"><input type="checkbox" data-change="report-f" data-key="service" ${r.service ? 'checked' : ''}><span class="box">${icon('check')}</span>Incluir labor social</label>
         <label class="check"><input type="checkbox" data-change="report-f" data-key="progress" ${r.progress ? 'checked' : ''}><span class="box">${icon('check')}</span>Incluir progreso de insignias</label>
       </div>
     </section>

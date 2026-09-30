@@ -115,4 +115,4 @@ const emptyState = (title, text, btn = '') => `<div class="empty">${emptyArt()}<
 
 // Vistas y manejadores globales (los definen los archivos de views/)
 const Views = {}, Actions = {}, Changes = {}, Inputs = {};
-const UIState = { attDate: '', actFilter: '', badgeScout: '', report: { from: '', to: '', scoutId: '', badgeId: '', photos: true, progress: true } };
+const UIState = { svcScout: '', attDate: '', actFilter: '', badgeScout: '', report: { from: '', to: '', scoutId: '', badgeId: '', photos: true, progress: true, service: true } };

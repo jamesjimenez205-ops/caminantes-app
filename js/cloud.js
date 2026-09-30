@@ -10,9 +10,11 @@ const Cloud = (() => {
     ['auth-compat.js', 'sha384-NiuRnBs5Z0OgJ12kYJLSeWxANeJN369zH3+Zn0TGVPaCH/TKmbPFqfOmmLtrj+wg'],
     ['firestore-compat.js', 'sha384-/SBCyt0JELVRyyrOp+QG5CdnpVoAry+uw9hdherLgyZxxePtHjOvQmJU5CHymUhT'],
   ];
-  const COLS = ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance']; // en memoria y en vivo
+  const COLS = ['scouts', 'badges', 'completions', 'activities', 'specifics', 'attendance', 'service']; // en memoria y en vivo
   const mirror = Object.fromEntries(COLS.map(c => [c, new Map()]));
   const photoCache = new Map();
+  // Colecciones cuyo permiso puede faltar sin romper el resto de la app (hasta que se publiquen las reglas actualizadas)
+  const OPTIONAL = new Set(['attendance', 'service']);
   let fs, auth;
 
   const plain = o => JSON.parse(JSON.stringify(o)); // Firestore no admite undefined
@@ -37,15 +39,19 @@ const Cloud = (() => {
   }
 
   // Misma interfaz que el almacenamiento local: all / get / put / del / clear
+  const denied = () => { throw new V.ValidationError('place', 'La nube todavía no permite guardar esto: hay que publicar las reglas de Firestore actualizadas (firestore.rules).'); };
   const db = {
-    onChange: null,
+    onChange: null, denied: new Set(),
     open() {
       return Promise.all(COLS.map(c => new Promise((res, rej) => {
         let first = true;
         fs.collection(c).onSnapshot(snap => {
           snap.docChanges().forEach(ch => (ch.type === 'removed' ? mirror[c].delete(ch.doc.id) : mirror[c].set(ch.doc.id, ch.doc.data())));
           if (first) { first = false; res(); } else if (db.onChange) db.onChange(c);
-        }, err => { if (first) rej(err); else report(err); });
+        }, err => {
+          if (first && OPTIONAL.has(c)) { first = false; db.denied.add(c); console.warn('Sin permiso en la colección «' + c + '»: publica las reglas de firestore.rules'); res(); }
+          else if (first) rej(err); else report(err);
+        });
       })));
     },
     async all(s) {
@@ -62,6 +68,7 @@ const Cloud = (() => {
       photoCache.set(id, p); return p;
     },
     async put(s, o) {
+      if (db.denied.has(s)) denied();
       if (s === 'photos') {
         photoCache.set(o.id, o);
         const data = await blobToDataURL(o.blob);
@@ -73,6 +80,7 @@ const Cloud = (() => {
       fs.collection(s).doc(o.id).set(d).catch(report);
     },
     async del(s, id) {
+      if (db.denied.has(s)) denied();
       if (s === 'photos') photoCache.delete(id); else mirror[s].delete(id);
       fs.collection(s).doc(id).delete().catch(report);
     },

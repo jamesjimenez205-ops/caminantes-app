@@ -386,3 +386,5 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .photo-row > div { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .rm-photo { font-size: .9rem; }
 .profile-head .avatar.xl { width: 96px; height: 96px; }
+
+.field-err { color: var(--warn); font-weight: 600; font-size: .9rem; margin: 6px 0 0; }

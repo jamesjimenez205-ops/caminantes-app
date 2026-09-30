@@ -10,7 +10,7 @@ const V = (() => {
   }
   const fail = (field, message) => { throw new ValidationError(field, message); };
 
-  const ALLOWED_CHAR = /^[\p{L}\p{M}\p{N}\p{Zs}\n.,;:!?¡¿()\[\]'"’‘“”«»%+\-–—\/&#@_*=°ºª~…$\p{Extended_Pictographic}️‍]$/u;
+  const ALLOWED_CHAR = /^[\p{L}\p{M}\p{N}\p{Zs}\n.,;:!?¡¿()\[\]'"’‘“”«»%+\-–—\/&#@_*=°ºª~…$•·‣▪●○→←✓✗\p{Extended_Pictographic}️‍]$/u;
   const CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f​‌‎‏‪-‮⁠-⁩﻿]/;
   const SUSPICIOUS = [
     /(javascript|vbscript|livescript)\s*:/i,
@@ -97,12 +97,13 @@ const V = (() => {
     };
   }
 
+  const REQ_MAX = 500, REQ_COUNT = 30;
   function reqLines(v, field = 'reqs') {
-    const raw = text(v, { field, label: 'Requisitos', max: 30 * 200, multiline: true });
-    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length > 30) fail(field, 'Requisitos: máximo 30');
-    lines.forEach(l => { if (l.length > 200) fail(field, 'Requisitos: cada uno admite máximo 200 caracteres'); });
-    return lines;
+    if (v == null) v = '';
+    if (typeof v !== 'string' || v.length > REQ_COUNT * REQ_MAX * 2) fail(field, 'Requisitos: texto demasiado largo');
+    const lines = v.split(/\r\n?|\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length > REQ_COUNT) fail(field, `Requisitos: máximo ${REQ_COUNT} (escribiste ${lines.length})`);
+    return lines.map((l, i) => text(l, { field, label: `Requisito ${i + 1}`, max: REQ_MAX, required: true }));
   }
   // Ruta de una imagen incluida en el proyecto (solo assets/…), nunca una URL externa
   function badgeImage(v) {
@@ -118,7 +119,7 @@ const V = (() => {
   }
   function badge(o) {
     obj(o, 'name', 'Insignia');
-    const reqs = arr(o.requirements, 30, 'reqs', 'Requisitos').map(r => ({ id: id(r?.id, 'reqs'), text: text(r?.text, { field: 'reqs', label: 'Requisito', min: 1, max: 200, required: true }) }));
+    const reqs = arr(o.requirements, 30, 'reqs', 'Requisitos').map(r => ({ id: id(r?.id, 'reqs'), text: text(r?.text, { field: 'reqs', label: 'Requisito', min: 1, max: REQ_MAX, required: true }) }));
     if (unique(reqs.map(r => r.id)).length !== reqs.length) fail('reqs', 'Requisitos repetidos');
     return {
       id: id(o.id), section: sec(o.section), group: badgeGroup(o), order: int(o.order, { field: 'order', label: 'Orden', min: 1, max: 99 }),
@@ -258,6 +259,13 @@ function showValidation(root, err) {
   if (!(err instanceof V.ValidationError)) return false;
   toast(err.message, 'err');
   const el = root?.querySelector?.(`[name="${err.field}"]`);
-  if (el) { el.setCustomValidity(err.message); el.reportValidity(); el.addEventListener('input', () => el.setCustomValidity(''), { once: true }); }
+  if (el) {
+    const box = el.closest('.field') || el.parentElement;
+    let msg = box.querySelector('.field-err');
+    if (!msg) { msg = document.createElement('p'); msg.className = 'field-err'; msg.setAttribute('role', 'alert'); box.appendChild(msg); }
+    msg.textContent = err.message;
+    el.setCustomValidity(err.message); el.reportValidity(); el.focus();
+    el.addEventListener('input', () => { el.setCustomValidity(''); msg.remove(); }, { once: true });
+  }
   return true;
 }

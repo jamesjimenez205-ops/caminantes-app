@@ -80,8 +80,8 @@ function badgeForm(id) {
       ${groups.length > 1 ? `<div class="field"><label class="lbl" for="bg">Tipo</label><select id="bg" name="group">${groups.map(g => `<option value="${g.k}" ${groupOf(b).k === g.k ? 'selected' : ''}>${esc(g.one)}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label class="lbl" for="bd">Descripción <small>(opcional)</small></label><input id="bd" name="description" value="${esc(b.description)}" maxlength="300" autocomplete="off"></div>
       <div class="field"><label class="lbl" for="br">Requisitos <small>(uno por línea; puede quedar vacío y agregarse después)</small></label>
-        <textarea id="br" name="reqs" rows="9" maxlength="6000" placeholder="Escribe un requisito por línea">${esc(b.requirements.map(r => r.text).join('\n'))}</textarea>
-        ${id ? '<small class="muted">Si ya hay avances marcados, evita reordenar las líneas: el avance sigue a la posición de cada requisito.</small>' : ''}</div>
+        <textarea id="br" name="reqs" rows="9" maxlength="30000" placeholder="Escribe un requisito por línea">${esc(b.requirements.map(r => r.text).join('\n'))}</textarea>
+        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita reordenar las líneas: el avance sigue a la posición de cada requisito.' : ''}</small></div>
     </div>
     <footer class="modal-foot">${id ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {

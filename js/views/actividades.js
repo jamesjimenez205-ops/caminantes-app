@@ -28,7 +28,7 @@ Actions['view-activity'] = d => {
       ${issues.length ? `<div class="alert">${icon('alert')}<span>${issues.map(i => i.t).join(' · ')}</span></div>` : ''}
       <p class="full-desc">${esc(a.description) || '<em>Sin descripción</em>'}</p>
       <h4>Participantes (${people.length})</h4>
-      <div class="chips">${people.map(s => `<span class="chip-person">${avatar(s.name, 'sm')}${esc(s.name)}</span>`).join('') || '<span class="muted">Ninguno</span>'}</div>
+      <div class="chips">${people.map(s => `<span class="chip-person">${avatar(s, 'sm')}${esc(s.name)}</span>`).join('') || '<span class="muted">Ninguno</span>'}</div>
       <h4>Fotografías (${a.photoIds.length})</h4>
       ${a.photoIds.length ? `<div class="gallery">${a.photoIds.map(p => `<a class="ph" data-act="lightbox" data-id="${p}"><img data-photo="${p}" alt=""></a>`).join('')}</div>` : '<p class="muted">Aún no hay fotos.</p>'}
     </div>
@@ -58,7 +58,7 @@ const ActForm = {
             ? `<select name="badge" required><option value="">Elige una insignia…</option>${Sec().groups.map(g => `<optgroup label="${esc(g.name)}">${S.badges.filter(b => (b.group || Sec().groups[0].k) === g.k).map(b => `<option value="${b.id}" ${st.badgeId === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</optgroup>`).join('')}</select>`
             : `<div class="badge-pick">${S.badges.map(b => `<label class="pick" style="--c:${b.color}"><input type="radio" name="badge" value="${b.id}" ${st.badgeId === b.id ? 'checked' : ''}><span>${patch(b, 'sm')}<em>${esc(b.name)}</em></span></label>`).join('')}</div>`}</div>
         <div class="field" id="f-people"><div class="lbl"><b>2</b> Participantes <span class="grow"></span><button type="button" class="link" id="p-all">Todos</button><button type="button" class="link" id="p-none">Ninguno</button></div>
-          <div class="people-pick">${S.scouts.map(s => `<label class="pp"><input type="checkbox" value="${s.id}" ${st.scoutIds.has(s.id) ? 'checked' : ''}><span>${avatar(s.name, 'sm')}${esc(s.name)}</span></label>`).join('')}</div></div>
+          <div class="people-pick">${S.scouts.map(s => `<label class="pp"><input type="checkbox" value="${s.id}" ${st.scoutIds.has(s.id) ? 'checked' : ''}><span>${avatar(s, 'sm')}${esc(s.name)}</span></label>`).join('')}</div></div>
         <div class="field"><label class="lbl" for="at"><b>3</b> Nombre de la actividad <small id="anum"></small></label>
           <input id="at" name="title" maxlength="80" required autocomplete="off" placeholder="Ej.: Taller de robótica" value="${esc(ex?.title || (ex?.description || '').slice(0, 60))}"></div>
         <div class="field"><label class="lbl" for="ad">¿Qué hicieron? <small>(opcional pero recomendado)</small></label>

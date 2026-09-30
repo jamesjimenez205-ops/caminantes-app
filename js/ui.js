@@ -36,12 +36,21 @@ const ICONS = {
 const icon = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
 // Parche de insignia: círculo con "costura" punteada
-const patch = (b, cls = '') => `<span class="patch ${cls}" style="--c:${b.color}">${icon(b.icon)}</span>`;
+// Parche de insignia: foto propia > imagen de assets > ícono
+const SAFE_IMG = /^assets\/[a-z0-9\/_-]{1,80}\.(png|webp|jpg)$/;
+const patch = (b, cls = '') => {
+  if (b.photoId) return `<span class="patch img ${cls}" style="--c:${b.color}"><img data-photo="${esc(b.photoId)}" alt=""></span>`;
+  if (b.image && SAFE_IMG.test(b.image)) return `<span class="patch img ${cls}" style="--c:${b.color}"><img src="${esc(b.image)}" alt="" loading="lazy"></span>`;
+  return `<span class="patch ${cls}" style="--c:${b.color}">${icon(b.icon)}</span>`;
+};
 
 const AV_COLORS = ['#1f7a34', '#b8860b', '#c62828', '#33383f', '#43a047'];
 const initials = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-const avatar = (name, cls = '') => {
+// avatar(nombre) o avatar(scout): si el Caminante/Scout tiene foto, se muestra en vez de las iniciales
+const avatar = (who, cls = '') => {
+  const name = typeof who === 'string' ? who : who.name, photo = typeof who === 'string' ? '' : who.photoId;
   const h = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
+  if (photo) return `<span class="avatar photo ${cls}" title="${esc(name)}"><img data-photo="${esc(photo)}" alt="${esc(name)}"></span>`;
   return `<span class="avatar ${cls}" style="background:${AV_COLORS[h % AV_COLORS.length]}" title="${esc(name)}">${esc(initials(name))}</span>`;
 };
 

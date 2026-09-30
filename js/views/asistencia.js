@@ -33,7 +33,7 @@ Views.asistencia = {
         <span class="att-count"><span class="tag done">Presentes ${n('P')}</span><span class="tag" style="background:#f6dcdc;color:#8e1f1f">Ausentes ${n('A')}</span><span class="tag prog">Justificados ${n('J')}</span>${unmarked ? `<span class="tag pend">Sin marcar ${unmarked}</span>` : ''}</span>
         <span><button class="btn" data-act="att-all" data-val="P">Todos presentes</button> <button class="btn ghost" data-act="att-all" data-val="">Limpiar</button></span>
       </div>
-      <ul class="att-list">${S.scouts.map(s => `<li><span class="who">${avatar(s.name, 'sm')}${esc(s.name)}</span>
+      <ul class="att-list">${S.scouts.map(s => `<li><span class="who">${avatar(s, 'sm')}${esc(s.name)}</span>
         <span class="seg" role="group" aria-label="Asistencia de ${esc(s.name)}">${ATT.map(([k, l]) => `<button type="button" class="${rec[s.id] === k ? 'on ' + k : ''}" data-act="att-set" data-scout="${s.id}" data-val="${k}" aria-pressed="${rec[s.id] === k}">${l}</button>`).join('')}</span></li>`).join('')}</ul>
       <p class="muted"><small>Cada toque se guarda al instante. Toca de nuevo el mismo botón para quitar la marca.</small></p>
     </section>
@@ -42,7 +42,7 @@ Views.asistencia = {
     <div class="sec-head"><h2>Resumen por ${esc(Sec().person)}</h2></div>
     <div class="card table-wrap"><table class="progress-table">
       <thead><tr><th>${esc(Sec().person)}</th><th>Presente</th><th>Ausente</th><th>Justificado</th><th>Asistencia</th></tr></thead>
-      <tbody>${S.scouts.map(s => { const t = Store.attendanceStats(s.id); return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s.name, 'sm')}${esc(s.name)}</a></td>
+      <tbody>${S.scouts.map(s => { const t = Store.attendanceStats(s.id); return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s, 'sm')}${esc(s.name)}</a></td>
         <td>${t.P}</td><td>${t.A}</td><td>${t.J}</td><td>${t.total ? `${bar(t.pct)}<small>${t.pct}% de ${plural(t.total, 'reunión', 'reuniones')}</small>` : '<small class="muted">Sin datos</small>'}</td></tr>`; }).join('')}</tbody></table></div>
 
     <div class="sec-head"><h2>Reuniones registradas</h2></div>

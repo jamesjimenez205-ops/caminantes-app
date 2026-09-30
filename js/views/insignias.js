@@ -71,6 +71,11 @@ function badgeForm(id) {
   openModal(`<form id="badgeform">
     <header class="modal-head"><h2>${id ? 'Editar insignia' : 'Nueva insignia'}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
     <div class="modal-body">
+      <div class="field photo-field"><div class="lbl">Imagen de la insignia <small>(opcional)</small></div>
+        <div class="photo-row"><span id="ph-prev">${patch(b, 'lg')}</span>
+          <div><label class="btn">${icon('camera')} ${b.photoId || b.image ? 'Cambiar imagen' : 'Subir imagen'}<input type="file" id="ph-file" name="photo" accept="image/jpeg,image/png,image/webp" hidden></label>
+            ${b.photoId ? '<label class="check rm-photo"><input type="checkbox" name="rmphoto"><span class="box">' + icon('check') + '</span>Quitar imagen</label>' : ''}
+            <small class="muted">JPG, PNG o WebP. Mejor cuadrada.</small></div></div></div>
       <div class="field"><label class="lbl" for="bn">Nombre</label><input id="bn" name="name" value="${esc(b.name)}" required maxlength="60" autocomplete="off"></div>
       ${groups.length > 1 ? `<div class="field"><label class="lbl" for="bg">Tipo</label><select id="bg" name="group">${groups.map(g => `<option value="${g.k}" ${groupOf(b).k === g.k ? 'selected' : ''}>${esc(g.one)}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label class="lbl" for="bd">Descripción <small>(opcional)</small></label><input id="bd" name="description" value="${esc(b.description)}" maxlength="300" autocomplete="off"></div>
@@ -81,13 +86,19 @@ function badgeForm(id) {
     <footer class="modal-foot">${id ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
     onMount: m => {
+      $('#ph-file', m).addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        try { await V.image(file); } catch (err) { e.target.value = ''; if (!showValidation(null, err)) throw err; return; }
+        $('#ph-prev', m).innerHTML = `<span class="patch img lg" style="--c:${b.color || '#3f9a52'}"><img src="${URL.createObjectURL(file)}" alt=""></span>`;
+      });
       $('#badgeform', m).addEventListener('submit', async e => {
         e.preventDefault();
         const f = new FormData(e.target);
         const data = { name: f.get('name'), description: f.get('description'), group: f.get('group') || groupOf(b).k };
+        const opts = { photoFile: $('#ph-file', m).files[0] || null, removePhoto: f.get('rmphoto') === 'on' };
         try {
-          if (id) await Store.saveBadge({ id, ...data }, f.get('reqs'));
-          else { const nb = await Store.createBadge(data, f.get('reqs')); location.hash = '#/insignias/' + nb.id; }
+          if (id) await Store.saveBadge({ id, ...data }, f.get('reqs'), opts);
+          else { const nb = await Store.createBadge(data, f.get('reqs'), opts); location.hash = '#/insignias/' + nb.id; }
           closeModal(); toast(id ? 'Insignia actualizada' : 'Insignia creada'); rerender();
         } catch (err) { if (!showValidation(e.target, err)) throw err; }
       });

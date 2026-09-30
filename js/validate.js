@@ -90,7 +90,7 @@ const V = (() => {
     for (const k of ['proyectos', 'progresion', 'participacion', 'impacto']) checks[k] = h.checks?.[k] === true;
     for (const st of HONOR_STEPS) steps[st.k] = h.steps?.[st.k] ? date(h.steps[st.k], { field: 'step', label: 'Fecha del paso', required: true }) : null;
     return {
-      id: optId(o.id, 'id') || undefined, section: sec(o.section), name: personName(o.name), birthdate: birth(o.birthdate),
+      id: optId(o.id, 'id') || undefined, section: sec(o.section), photoId: optId(o.photoId, 'photo') || '', name: personName(o.name), birthdate: birth(o.birthdate),
       notes: text(o.notes, { field: 'notes', label: 'Notas', max: 500, multiline: true }),
       createdAt: Number.isFinite(o.createdAt) ? o.createdAt : undefined,
       stages, honor: { checks, proyectoPct: int(h.proyectoPct ?? 0, { field: 'proyectoPct', label: 'Porcentaje del proyecto' }), steps },
@@ -103,6 +103,12 @@ const V = (() => {
     if (lines.length > 30) fail(field, 'Requisitos: máximo 30');
     lines.forEach(l => { if (l.length > 200) fail(field, 'Requisitos: cada uno admite máximo 200 caracteres'); });
     return lines;
+  }
+  // Ruta de una imagen incluida en el proyecto (solo assets/…), nunca una URL externa
+  function badgeImage(v) {
+    if (v == null || v === '') return '';
+    if (typeof v !== 'string' || !/^assets\/[a-z0-9\/_-]{1,80}\.(png|webp|jpg)$/.test(v)) fail('image', 'Imagen de insignia no válida');
+    return v;
   }
   function badgeGroup(o) {
     const keys = SECTIONS[sec(o.section)].groups.map(g => g.k);
@@ -118,7 +124,7 @@ const V = (() => {
       id: id(o.id), section: sec(o.section), group: badgeGroup(o), order: int(o.order, { field: 'order', label: 'Orden', min: 1, max: 99 }),
       name: text(o.name, { field: 'name', label: 'Nombre', min: 2, max: 60, required: true }),
       description: text(o.description, { field: 'description', label: 'Descripción', max: 300 }),
-      color: color(o.color), icon: icon(o.icon), requirements: reqs,
+      color: color(o.color), icon: icon(o.icon), requirements: reqs, image: badgeImage(o.image), photoId: optId(o.photoId, 'photo') || '',
       reqVersion: o.reqVersion == null ? 0 : int(o.reqVersion, { field: 'reqVersion', label: 'Versión', min: 0, max: 99 }),
     };
   }
@@ -228,6 +234,7 @@ const V = (() => {
     });
     const have = new Set(photos.map(p => p.id));
     activities.forEach(a => { a.photoIds = a.photoIds.filter(x => have.has(x)); });
+    [...scouts, ...badges].forEach(o => { if (o.photoId && !have.has(o.photoId)) o.photoId = ''; });
     const attendanceList = (d.attendance ? arr(d.attendance, LIMITS.attendance, 'file', 'Asistencia') : []).map(o => attendance(o, ctx));
     return { scouts, badges, specifics, activities, completions, photos, attendance: attendanceList };
   }

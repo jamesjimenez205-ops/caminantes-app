@@ -12,7 +12,7 @@ Views.progreso = {
       <thead><tr><th>${esc(Sec().person)}</th>${many ? '<th>En progreso</th><th>Completadas</th>' : S.badges.map(b => `<th><span class="th-b">${patch(b, 'xs')}${esc(b.name)}</span></th>`).join('')}<th>General</th></tr></thead>
       <tbody>${S.scouts.map(s => {
         const p = Store.scoutProgress(s.id);
-        return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s.name, 'sm')}${esc(s.name)}</a></td>
+        return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s, 'sm')}${esc(s.name)}</a></td>
           ${many ? `<td>${S.badges.filter(b => { const x = Store.badgeProgress(s.id, b.id).pct; return x > 0 && x < 100; }).length}</td><td>${S.badges.filter(b => Store.badgeProgress(s.id, b.id).pct >= 100).length}</td>`
             : S.badges.map(b => { const bp = Store.badgeProgress(s.id, b.id); return `<td>${bar(bp.pct)}<small>${bp.done}/${bp.total}</small></td>`; }).join('')}
           <td><b>${p.pct}%</b></td></tr>`;

@@ -75,6 +75,12 @@ const Store = {
       await DB.put('badges', { ...b, requirements: b.requirements.filter(r => !gone.includes(r.id)), reqVersion: REQ_VERSION });
     }
     await this.reload();
+    // Migración: las destrezas de Unidad que aún no tienen imagen reciben la del documento (todas las secciones)
+    for (const seed of UNIT_SEED) {
+      const b = ALL.badges.find(x => x.id === seed.id);
+      if (b && seed.image && !b.image && !b.photoId) await DB.put('badges', { ...b, image: seed.image });
+    }
+    await this.reload();
     const OLD = { a1: '#3f6b6b', a2: '#5f8f3e', a3: '#8a5a34', a4: '#a3743f', a5: '#2d5a3d' };
     for (const b of S.badges) {
       if (OLD[b.id] === b.color) await DB.put('badges', { ...b, color: SEED_BADGES.find(x => x.id === b.id).color });
@@ -101,14 +107,28 @@ const Store = {
   activity: id => S.activities.find(a => a.id === id),
 
   // ---- Caminantes
-  async saveScout(input) {
+  // Foto de perfil: se valida, se reduce (480 px) y se guarda en el almacén de fotos. opts: { photoFile, removePhoto }
+  async _setPhoto(obj, prevId, { photoFile, removePhoto } = {}, max) {
+    if (photoFile) {
+      await V.image(photoFile);
+      const pid = uid();
+      await DB.put('photos', { id: pid, blob: await resizeImage(photoFile, max, 0.85, 200 * 1024) });
+      if (prevId) await DB.del('photos', prevId);
+      obj.photoId = pid;
+    } else if (removePhoto && prevId) { await DB.del('photos', prevId); obj.photoId = ''; }
+    else obj.photoId = prevId || '';
+  },
+  async saveScout(input, opts = {}) {
     const s = V.scout(input);
+    if (opts.photoFile) await V.image(opts.photoFile);
     if (!s.id) { s.id = uid(); s.createdAt = Date.now(); }
     else if (!this.scout(s.id)) throw new V.ValidationError('id', 'Caminante inexistente');
+    await this._setPhoto(s, this.scout(s.id)?.photoId, opts, 480);
     await DB.put('scouts', s); await this.reload();
     return s;
   },
   async deleteScout(id) {
+    const ph = this.scout(id)?.photoId; if (ph) await DB.del('photos', ph);
     await DB.del('scouts', id);
     for (const c of S.specifics.filter(c => c.scoutId === id)) await DB.del('specifics', c.id);
     for (const c of S.completions.filter(c => c.scoutId === id)) await DB.del('completions', c.id);
@@ -140,7 +160,8 @@ const Store = {
   },
 
   // ---- Insignias: `lines` = un requisito por línea; se conserva el id por posición para no perder avances
-  async createBadge(input, rawLines) {
+  async createBadge(input, rawLines, opts = {}) {
+    if (opts.photoFile) await V.image(opts.photoFile);
     const lines = V.reqLines(rawLines), g = SECTIONS[this.section].groups.find(x => x.k === input.group) || SECTIONS[this.section].groups[0];
     const bid = 'n' + uid();
     const b = V.badge({
@@ -148,6 +169,7 @@ const Store = {
       name: input.name, description: input.description ?? '', color: g.color, icon: g.icon, reqVersion: REQ_VERSION,
       requirements: lines.map((text, i) => ({ id: bid + 'r' + (i + 1), text })),
     });
+    await this._setPhoto(b, '', opts, 320);
     await DB.put('badges', b); await this.reload();
     return b;
   },
@@ -156,9 +178,11 @@ const Store = {
     if (!b) throw new V.ValidationError('name', 'Insignia inexistente');
     if (S.activities.some(a => a.badgeId === id)) throw new V.ValidationError('name', 'Tiene actividades registradas: no se puede eliminar');
     for (const c of S.completions.filter(c => c.badgeId === id)) await DB.del('completions', c.id);
+    if (b.photoId) await DB.del('photos', b.photoId);
     await DB.del('badges', id); await this.reload();
   },
-  async saveBadge(input, rawLines) {
+  async saveBadge(input, rawLines, opts = {}) {
+    if (opts.photoFile) await V.image(opts.photoFile);
     const lines = V.reqLines(rawLines), cur = this.badge(input.id);
     if (!cur) throw new V.ValidationError('id', 'Insignia inexistente');
     const old = cur.requirements;
@@ -168,6 +192,7 @@ const Store = {
       for (const c of S.completions.filter(c => c.reqId === r.id)) await DB.del('completions', c.id);
     }
     Object.assign(b, V.badge(b));
+    await this._setPhoto(b, cur.photoId, opts, 320);
     await DB.put('badges', b); await this.reload();
   },
 

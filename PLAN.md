@@ -48,3 +48,7 @@ Las 5 áreas de competencia del manual 2019. Los requisitos de cada área vienen
 - Los datos llevan el campo `section` (por defecto `caminantes`); `Store` carga solo la sección activa (`S`) y conserva todo en `ALL`. Respaldos incluyen todas las secciones.
 - Colores: verde, amarillo y rojo del logo del grupo para la interfaz; el azul de la insignia de Caminantes queda en el logo de la sección y en sus áreas.
 - Unidad Scout (11 a 15 años) está activa: 58 destrezas (sin requisitos, los agrega el grupo), 4 etapas de progresión (Pista, Senda, Rumbo, Travesía) y «Segmentos» que se crean desde Insignias → Agregar insignia. Las insignias tienen tipo (`group`) y cualquiera puede crearse, editarse o eliminarse. La sección elegida se recuerda en el dispositivo.
+
+## Fotos e imágenes
+- Cada Caminante/Scout puede tener foto de perfil (campo `photoId`, se guarda reducida en el almacén de fotos). Las insignias usan: foto propia (`photoId`) > imagen del proyecto (`image`, solo rutas `assets/…`) > ícono.
+- Las destrezas de Unidad traen su imagen recortada del documento DESTREZAS en `assets/destrezas/*.webp` (Electricista no tiene imagen en el documento).

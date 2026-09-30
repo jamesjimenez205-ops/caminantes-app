@@ -23,7 +23,7 @@ Views['maximo-logro'] = {
     const areas = Store.areasReached(id);
     const ready = n === HONOR_CRITERIA.length;
     return `<section class="card honor-card">
-      <header>${avatar(s.name, 'lg')}<div class="grow"><h3><a href="#/caminantes/${id}">${esc(s.name)}</a></h3><small class="muted">${n} de ${HONOR_CRITERIA.length} criterios${Store.stageOf(s) ? ' · Etapa ' + Store.stageOf(s) : ''}</small>${bar(p)}</div>
+      <header>${avatar(s, 'lg')}<div class="grow"><h3><a href="#/caminantes/${id}">${esc(s.name)}</a></h3><small class="muted">${n} de ${HONOR_CRITERIA.length} criterios${Store.stageOf(s) ? ' · Etapa ' + Store.stageOf(s) : ''}</small>${bar(p)}</div>
         ${h.steps.entrega ? '<span class="tag done">Condecorado</span>' : ready ? '<span class="tag prog">Listo para solicitar</span>' : '<span class="tag pend">En camino</span>'}</header>
       <div class="honor-cols">
         <div><h4>Criterios</h4><ul class="checklist">${HONOR_CRITERIA.map(c => {

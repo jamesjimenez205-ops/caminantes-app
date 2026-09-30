@@ -20,7 +20,7 @@ Views.caminantes = {
       const p = Store.scoutProgress(s.id);
       const acts = S.activities.filter(a => a.scoutIds.includes(s.id)).length;
       const doneB = S.badges.filter(b => Store.badgeProgress(s.id, b.id).pct >= 100).length;
-      return `<a class="card scout-card" href="#/caminantes/${s.id}">${avatar(s.name, 'lg')}<b class="name">${esc(s.name)}</b>${Sec().features.stages && Store.stageOf(s) ? `<span class="phase p1">Etapa ${Store.stageOf(s)}</span>` : ''}
+      return `<a class="card scout-card" href="#/caminantes/${s.id}">${avatar(s, 'lg')}<b class="name">${esc(s.name)}</b>${Sec().features.stages && Store.stageOf(s) ? `<span class="phase p1">Etapa ${Store.stageOf(s)}</span>` : ''}
         <span class="muted">${[ageOf(s.birthdate), plural(acts, 'actividad', 'actividades')].filter(Boolean).join(' · ')}</span>
         ${bar(p.pct)}<span class="row-between"><small>${p.pct}% general</small><small>${S.badges.length > 8 ? plural(doneB, 'insignia completada', 'insignias completadas') : `${doneB}/${S.badges.length} insignias`}</small></span></a>`;
     }).join('')}</div>` : emptyState(`Aún no hay ${Sec().people}`, 'Agrega a cada joven para poder asignarle actividades e insignias.', `<button class="btn primary" data-act="new-scout">${icon('plus')} Agregar ${esc(Sec().person)}</button>`)}`;
@@ -34,7 +34,7 @@ Views.caminantes = {
     return `
     <a href="#/caminantes" class="back">${icon('back')} ${esc(Sec().people)}</a>
     <section class="profile-head card">
-      ${avatar(s.name, 'xl')}
+      ${avatar(s, 'xl')}
       <div class="grow"><h1>${esc(s.name)}</h1><p class="muted">${[ageOf(s.birthdate), s.birthdate ? 'Nac. ' + fmtDate(s.birthdate) : ''].filter(Boolean).join(' · ')}</p>
         ${s.notes ? `<p class="notes">${esc(s.notes)}</p>` : ''}
         <div class="overall"><span>Progreso general <b>${p.pct}%</b></span>${bar(p.pct)}</div></div>
@@ -72,6 +72,11 @@ function scoutForm(id) {
   openModal(`<form id="scoutform">
     <header class="modal-head"><h2>${id ? 'Editar' : 'Nuevo'} ${esc(Sec().person)}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
     <div class="modal-body">
+      <div class="field photo-field"><div class="lbl">Foto <small>(opcional)</small></div>
+        <div class="photo-row"><span id="ph-prev">${avatar(s, 'xl')}</span>
+          <div><label class="btn">${icon('camera')} ${s.photoId ? 'Cambiar foto' : 'Subir foto'}<input type="file" id="ph-file" name="photo" accept="image/jpeg,image/png,image/webp" hidden></label>
+            ${s.photoId ? '<label class="check rm-photo"><input type="checkbox" name="rmphoto"><span class="box">' + icon('check') + '</span>Quitar foto</label>' : ''}
+            <small class="muted">JPG, PNG o WebP. Se reduce automáticamente.</small></div></div></div>
       <div class="field"><label class="lbl" for="sn">Nombre completo</label><input id="sn" name="name" value="${esc(s.name)}" required autofocus maxlength="60" autocomplete="off"></div>
       <div class="field"><label class="lbl" for="sb">Fecha de nacimiento <small>(opcional)</small></label><input id="sb" type="date" name="birthdate" value="${esc(s.birthdate)}" min="1990-01-01" max="${today()}"></div>
       <div class="field"><label class="lbl" for="so">Notas <small>(opcional)</small></label><textarea id="so" name="notes" rows="3" maxlength="500">${esc(s.notes)}</textarea></div>
@@ -81,11 +86,18 @@ function scoutForm(id) {
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button>
     </footer></form>`, {
     onMount: m => {
+      // vista previa de la foto elegida
+      $('#ph-file', m).addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        try { await V.image(file); } catch (err) { e.target.value = ''; if (!showValidation(null, err)) throw err; return; }
+        $('#ph-prev', m).innerHTML = `<span class="avatar photo xl"><img src="${URL.createObjectURL(file)}" alt=""></span>`;
+      });
       $('#scoutform', m).addEventListener('submit', async e => {
         e.preventDefault();
-        const f = new FormData(e.target);
+        const f = new FormData(e.target), file = $('#ph-file', m).files[0];
         try {
-          const saved = await Store.saveScout({ ...s, id, name: f.get('name'), birthdate: f.get('birthdate'), notes: f.get('notes') });
+          const saved = await Store.saveScout({ ...s, id, name: f.get('name'), birthdate: f.get('birthdate'), notes: f.get('notes') },
+            { photoFile: file || null, removePhoto: f.get('rmphoto') === 'on' });
           closeModal(); toast(`${Sec().person} guardado`); rerender();
           if (!id) location.hash = '#/caminantes/' + saved.id;
         } catch (err) { if (!showValidation(e.target, err)) throw err; }

@@ -13,7 +13,7 @@ function activityCard(a) {
       <h3 class="act-title">${esc(a.title || (a.description || '').slice(0, 60) || 'Actividad')}</h3>
       <p class="desc">${esc(a.description) || '<em>Sin descripción</em>'}</p>
       <div class="foot">
-        <span class="avatars">${people.slice(0, 5).map(s => avatar(s.name, 'sm')).join('')}${people.length > 5 ? `<span class="avatar sm more">+${people.length - 5}</span>` : ''}</span>
+        <span class="avatars">${people.slice(0, 5).map(s => avatar(s, 'sm')).join('')}${people.length > 5 ? `<span class="avatar sm more">+${people.length - 5}</span>` : ''}</span>
         ${issues.length ? `<span class="warn">${icon('alert')} ${plural(issues.length, 'pendiente', 'pendientes')}</span>` : ''}
       </div>
     </div></article>`;

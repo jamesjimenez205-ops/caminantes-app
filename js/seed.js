@@ -67,9 +67,13 @@ const UNIT_DESTREZAS = [
   'Seguridad', 'Electricista', 'Robótica', 'Reciclaje', 'Radio', 'Programador', 'Primeros auxilios',
   'Prevención del crimen', 'Preparador para emergencias', 'Pionero', 'Pesca', 'Patinaje', 'Orientación', 'Orador',
 ];
+// Imágenes recortadas del documento DESTREZAS (assets/destrezas/<nombre>.webp). Electricista no tiene imagen en el documento.
+const SLUG = n => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const UNIT_SIN_IMAGEN = new Set(['Electricista']);
 const UNIT_SEED = [...UNIT_DESTREZAS].sort((a, b) => a.localeCompare(b, 'es')).map((name, i) => ({
   id: 'd' + String(i + 1).padStart(2, '0'), section: 'unidad', group: 'destreza', order: i + 1, name,
   description: '', icon: 'award', color: '#3f9a52', requirements: [], reqVersion: REQ_VERSION,
+  image: UNIT_SIN_IMAGEN.has(name) ? '' : 'assets/destrezas/' + SLUG(name) + '.webp',
 }));
 
 // Etapas de progresión de Unidad (Dirección Nacional de Programa · El Cómo para el Dirigente de Sección Media).

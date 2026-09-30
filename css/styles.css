@@ -388,3 +388,13 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .profile-head .avatar.xl { width: 96px; height: 96px; }
 
 .field-err { color: var(--warn); font-weight: 600; font-size: .9rem; margin: 6px 0 0; }
+
+/* ---- Editor de requisitos */
+.req-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.req-row { display: flex; align-items: center; gap: 8px; }
+.req-row .n { width: 26px; height: 26px; border-radius: 50%; background: var(--sand); color: var(--forest); display: grid; place-items: center; font: 700 .8rem var(--sans); flex: none; }
+.req-row input { flex: 1; min-width: 0; }
+.quick-req { margin-top: 14px; } .qr-row { display: flex; gap: 10px; } .qr-row input { flex: 1; min-width: 0; }
+@media (max-width: 560px) { .qr-row { flex-direction: column; } }
+
+#badgeform .field > small.muted { display: block; margin-top: 8px; }

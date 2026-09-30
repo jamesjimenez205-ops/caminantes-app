@@ -45,7 +45,7 @@ Views.insignias = {
       ${patch(b, 'lg')}<div class="grow"><small class="muted">${esc(groupOf(b).one)}</small><h1>${esc(b.name)}</h1>${b.description ? `<p class="muted">${esc(b.description)}</p>` : ''}</div>
       <button class="btn" data-act="edit-badge" data-id="${id}">${icon('edit')} Editar</button>
     </section>
-    ${!b.requirements.length ? `<div class="card note">${icon('alert')}<span>Esta insignia aún no tiene requisitos. <a href="#" data-act="edit-badge" data-id="${id}">Agrégalos aquí</a>.</span></div>`
+    ${!b.requirements.length ? `<div class="card note">${icon('alert')}<span>Esta insignia aún no tiene requisitos. Agrega el primero abajo (puede ser uno solo o varios).</span></div>`
       : S.scouts.length ? `
     <section class="card">
       <div class="picker"><label for="ps">Marcar requisitos de:</label>
@@ -57,7 +57,25 @@ Views.insignias = {
         return `<li><label><input type="checkbox" data-change="toggle-req" data-scout="${sid}" data-badge="${id}" data-req="${r.id}" ${Store.isDone(sid, r.id) ? 'checked' : ''}>
           <span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}</span><small class="who">${n}/${S.scouts.length}</small></label></li>`;
       }).join('')}</ul>
-    </section>` : `<div class="card note">${icon('users')}<span>Agrega <a href="#/caminantes">${esc(Sec().people)}</a> para marcar sus requisitos.</span></div>`}`;
+    </section>` : `<div class="card note">${icon('users')}<span>Agrega <a href="#/caminantes">${esc(Sec().people)}</a> para marcar sus requisitos.</span></div>`}
+    <form class="card quick-req" id="quickreq" autocomplete="off">
+      <label class="lbl" for="qr">Agregar un requisito</label>
+      <div class="qr-row"><input id="qr" name="reqs" maxlength="500" placeholder="Escribe el requisito y pulsa Agregar…"><button class="btn primary">${icon('plus')} Agregar</button></div>
+    </form>`;
+  },
+
+  mount(root, id) {
+    const f = $('#quickreq', root);
+    if (!f) return;
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      const b = Store.badge(id), v = String(new FormData(f).get('reqs') || '').trim();
+      if (!b || !v) return;
+      try {
+        await Store.saveBadge({ id, name: b.name, description: b.description, group: b.group }, [...b.requirements.map(r => r.text), v].join('\n'));
+        toast('Requisito agregado'); rerender();
+      } catch (err) { if (!showValidation(f, err)) throw err; }
+    });
   },
 };
 
@@ -79,13 +97,43 @@ function badgeForm(id) {
       <div class="field"><label class="lbl" for="bn">Nombre</label><input id="bn" name="name" value="${esc(b.name)}" required maxlength="60" autocomplete="off"></div>
       ${groups.length > 1 ? `<div class="field"><label class="lbl" for="bg">Tipo</label><select id="bg" name="group">${groups.map(g => `<option value="${g.k}" ${groupOf(b).k === g.k ? 'selected' : ''}>${esc(g.one)}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label class="lbl" for="bd">Descripción <small>(opcional)</small></label><input id="bd" name="description" value="${esc(b.description)}" maxlength="300" autocomplete="off"></div>
-      <div class="field"><label class="lbl" for="br">Requisitos <small>(uno por línea; puede quedar vacío y agregarse después)</small></label>
-        <textarea id="br" name="reqs" rows="9" maxlength="30000" placeholder="Escribe un requisito por línea">${esc(b.requirements.map(r => r.text).join('\n'))}</textarea>
-        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita reordenar las líneas: el avance sigue a la posición de cada requisito.' : ''}</small></div>
+      <div class="field"><div class="lbl">Requisitos <small>(1 o varios; puedes agregar más después)</small></div>
+        <div id="reqrows" class="req-rows"></div>
+        <button type="button" class="btn" id="addreq">${icon('plus')} Agregar requisito</button>
+        <input type="hidden" name="reqs" id="reqs-h">
+        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas.</small></div>
     </div>
     <footer class="modal-foot">${id ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
     onMount: m => {
+      const list = $('#reqrows', m);
+      const renumber = () => $$('.req-row', list).forEach((r, i) => { $('.n', r).textContent = i + 1; });
+      const addRow = (val = '', focus = true, after = null) => {
+        const d = document.createElement('div'); d.className = 'req-row';
+        d.innerHTML = `<span class="n"></span><input class="req-in" maxlength="500" autocomplete="off" placeholder="Escribe un requisito…" aria-label="Requisito"><button type="button" class="icon-btn req-del" aria-label="Quitar requisito">${icon('x')}</button>`;
+        $('input', d).value = val;
+        if (after) after.after(d); else list.appendChild(d);
+        renumber(); if (focus) $('input', d).focus();
+        return d;
+      };
+      (b.requirements.length ? b.requirements.map(r => r.text) : ['']).forEach(t => addRow(t, false));
+      $('#addreq', m).onclick = () => addRow();
+      list.addEventListener('click', e => {
+        const del = e.target.closest('.req-del'); if (!del) return;
+        del.closest('.req-row').remove(); if (!$$('.req-row', list).length) addRow('', false); renumber();
+      });
+      list.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.matches('.req-in')) { e.preventDefault(); addRow('', true, e.target.closest('.req-row')); }
+      });
+      list.addEventListener('paste', e => {
+        const t = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/[\r\n]/.test(t)) return;
+        e.preventDefault();
+        const lines = t.split(/\r\n?|\n/).map(l => l.trim()).filter(Boolean);
+        let last = e.target.closest('.req-row');
+        lines.forEach((l, i) => { if (i === 0 && !e.target.value.trim()) e.target.value = l; else last = addRow(l, false, last); });
+        renumber();
+      });
       $('#ph-file', m).addEventListener('change', async e => {
         const file = e.target.files[0]; if (!file) return;
         try { await V.image(file); } catch (err) { e.target.value = ''; if (!showValidation(null, err)) throw err; return; }
@@ -93,6 +141,7 @@ function badgeForm(id) {
       });
       $('#badgeform', m).addEventListener('submit', async e => {
         e.preventDefault();
+        $('#reqs-h', m).value = $$('.req-in', m).map(i => i.value.trim()).filter(Boolean).join('\n');
         const f = new FormData(e.target);
         const data = { name: f.get('name'), description: f.get('description'), group: f.get('group') || groupOf(b).k };
         const opts = { photoFile: $('#ph-file', m).files[0] || null, removePhoto: f.get('rmphoto') === 'on' };

@@ -370,3 +370,7 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
   .brand img { height: 42px; }
   .side-art { display: none; }
 }
+
+.search { margin-bottom: 14px; } .search input { max-width: 380px; }
+.group-block + .group-block { margin-top: 8px; }
+.group-block .sec-head h2 small { font-size: .9rem; font-weight: 400; }

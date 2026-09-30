@@ -33,10 +33,12 @@ const Store = {
 
   async setSection(id) {
     if (!Object.hasOwn(SECTIONS, id) || !SECTIONS[id].enabled) return;
-    this.section = id; await this.reload();
+    this.section = id; try { localStorage.setItem('caminantes-seccion', id); } catch { /* nada */ }
+    await this.reload();
     if (!S.badges.length) { for (const b of SECTIONS[id].seed) await DB.put('badges', b); await this.reload(); }
   },
   async init() {
+    try { const s = localStorage.getItem('caminantes-seccion'); if (s && Object.hasOwn(SECTIONS, s) && SECTIONS[s].enabled) this.section = s; } catch { /* nada */ }
     await DB.open();
     await this.reload();
     // Migración: reemplaza las insignias de ejemplo anteriores (b1–b4) si aún no hay datos.
@@ -119,7 +121,7 @@ const Store = {
   },
 
   // ---- Etapas, competencias específicas y máximo logro
-  stageOf(s) { const st = [...STAGES].reverse().find(x => s.stages?.[x.k]); return st ? st.name : ''; },
+  stageOf(s) { const st = [...(SECTIONS[s.section || this.section]?.stages || [])].reverse().find(x => s.stages?.[x.k]); return st ? st.name : ''; },
   async saveSpecific(input) {
     const o = V.specific(input, V.context(S.scouts, S.badges));
     o.id = o.id || uid(); await DB.put('specifics', o); await this.reload();
@@ -138,11 +140,29 @@ const Store = {
   },
 
   // ---- Insignias: `lines` = un requisito por línea; se conserva el id por posición para no perder avances
+  async createBadge(input, rawLines) {
+    const lines = V.reqLines(rawLines), g = SECTIONS[this.section].groups.find(x => x.k === input.group) || SECTIONS[this.section].groups[0];
+    const bid = 'n' + uid();
+    const b = V.badge({
+      id: bid, section: this.section, group: g.k, order: Math.max(0, ...S.badges.map(x => x.order || 0)) + 1,
+      name: input.name, description: input.description ?? '', color: g.color, icon: g.icon, reqVersion: REQ_VERSION,
+      requirements: lines.map((text, i) => ({ id: bid + 'r' + (i + 1), text })),
+    });
+    await DB.put('badges', b); await this.reload();
+    return b;
+  },
+  async deleteBadge(id) {
+    const b = this.badge(id);
+    if (!b) throw new V.ValidationError('name', 'Insignia inexistente');
+    if (S.activities.some(a => a.badgeId === id)) throw new V.ValidationError('name', 'Tiene actividades registradas: no se puede eliminar');
+    for (const c of S.completions.filter(c => c.badgeId === id)) await DB.del('completions', c.id);
+    await DB.del('badges', id); await this.reload();
+  },
   async saveBadge(input, rawLines) {
     const lines = V.reqLines(rawLines), cur = this.badge(input.id);
     if (!cur) throw new V.ValidationError('id', 'Insignia inexistente');
     const old = cur.requirements;
-    const b = V.badge({ ...cur, name: input.name, description: input.description, requirements: cur.requirements });
+    const b = V.badge({ ...cur, name: input.name, description: input.description, group: input.group ?? cur.group, requirements: cur.requirements });
     b.requirements = lines.map((text, i) => ({ id: old[i]?.id || b.id + 'r' + uid(), text }));
     for (const r of old.slice(lines.length)) {
       for (const c of S.completions.filter(c => c.reqId === r.id)) await DB.del('completions', c.id);

@@ -47,4 +47,4 @@ Las 5 áreas de competencia del manual 2019. Los requisitos de cada área vienen
 - `js/sections.js`: `GROUP` (nombre, logo `assets/grupo.png`) y `SECTIONS` (Caminantes activa; Unidad deshabilitada). Cada sección define nombre, logo, lema, funciones (`stages`, `specifics`, `honor`) y sus insignias iniciales (`seed`).
 - Los datos llevan el campo `section` (por defecto `caminantes`); `Store` carga solo la sección activa (`S`) y conserva todo en `ALL`. Respaldos incluyen todas las secciones.
 - Colores: verde, amarillo y rojo del logo del grupo para la interfaz; el azul de la insignia de Caminantes queda en el logo de la sección y en sus áreas.
-- Para sumar la Unidad: habilitarla en `SECTIONS`, agregar logo, insignias (`seed`) y adaptar los textos que aún dicen «Caminante».
+- Unidad Scout (11 a 15 años) está activa: 58 destrezas (sin requisitos, los agrega el grupo), 4 etapas de progresión (Pista, Senda, Rumbo, Travesía) y «Segmentos» que se crean desde Insignias → Agregar insignia. Las insignias tienen tipo (`group`) y cualquiera puede crearse, editarse o eliminarse. La sección elegida se recuerda en el dispositivo.

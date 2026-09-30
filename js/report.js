@@ -48,7 +48,7 @@ const Report = {
     const fd = d => d ? fmtDate(d) : null;
     const period = f.from || f.to ? `${fd(f.from) || 'inicio'} a ${fd(f.to) || 'hoy'}` : 'Todo el periodo';
     txt(`Periodo: ${period}`, M, y, { size: 10, color: MUTED }); y += 5;
-    txt(`Caminante: ${scout ? scout.name : 'Todos'}    Insignia: ${badge ? badge.name : 'Todas'}`, M, y, { size: 10, color: MUTED }); y += 5;
+    txt(`${Sec().person}: ${scout ? scout.name : 'Todos'}    Insignia: ${badge ? badge.name : 'Todas'}`, M, y, { size: 10, color: MUTED }); y += 5;
     txt(`Generado el ${fmtDate(today())}`, M, y, { size: 10, color: MUTED }); y += 9;
 
     const nPhotos = acts.reduce((n, a) => n + a.photoIds.length, 0);
@@ -66,9 +66,12 @@ const Report = {
         ensure(20); txt('Progreso de insignias', M, y, { size: 14, bold: true, color: FOREST }); y += 3;
         doc.setDrawColor(...LEAF); doc.setLineWidth(0.6); doc.line(M, y, M + 22, y); y += 7;
         for (const s of scouts) {
-          ensure(8 + badges.length * 7);
+          // con muchas insignias (Unidad) solo se listan las que tienen avance
+          const list = badge || badges.length <= 8 ? badges : badges.filter(b => Store.badgeProgress(s.id, b.id).done > 0);
+          ensure(8 + Math.max(1, list.length) * 7);
           txt(s.name, M, y, { size: 11, bold: true }); y += 5.5;
-          for (const b of badges) {
+          if (!list.length) { txt('Sin avances registrados', M + 4, y, { size: 9, color: MUTED }); y += 6; }
+          for (const b of list) {
             const p = Store.badgeProgress(s.id, b.id);
             txt(b.name, M + 4, y, { size: 9 }); drawBar(M + 60, y - 2.6, 80, p.pct);
             txt(`${p.done}/${p.total}  ·  ${p.pct}%`, M + 145, y, { size: 9, color: MUTED }); y += 6;

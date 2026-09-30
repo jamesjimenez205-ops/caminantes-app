@@ -45,7 +45,7 @@ Actions['del-activity'] = async d => {
 // ---------- Formulario: insignia → participantes → nombre → qué hicieron → fotos → guardar (el n.º se cuenta solo)
 const ActForm = {
   open(id) {
-    if (!S.scouts.length) { toast('Primero agrega al menos un Caminante', 'err'); location.hash = '#/caminantes'; return; }
+    if (!S.scouts.length) { toast(`Primero agrega al menos un ${Sec().person}`, 'err'); location.hash = '#/caminantes'; return; }
     const ex = id ? Store.activity(id) : null;
     const st = { badgeId: ex?.badgeId || '', scoutIds: new Set(ex?.scoutIds || []), files: [], keep: [...(ex?.photoIds || [])], removed: [] };
     openModal(`<form id="actform" novalidate>
@@ -54,7 +54,9 @@ const ActForm = {
         <button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
       <div class="modal-body">
         <div class="field" id="f-badge"><div class="lbl"><b>1</b> Insignia relacionada</div>
-          <div class="badge-pick">${S.badges.map(b => `<label class="pick" style="--c:${b.color}"><input type="radio" name="badge" value="${b.id}" ${st.badgeId === b.id ? 'checked' : ''}><span>${patch(b, 'sm')}<em>${esc(b.name)}</em></span></label>`).join('')}</div></div>
+          ${S.badges.length > 8
+            ? `<select name="badge" required><option value="">Elige una insignia…</option>${Sec().groups.map(g => `<optgroup label="${esc(g.name)}">${S.badges.filter(b => (b.group || Sec().groups[0].k) === g.k).map(b => `<option value="${b.id}" ${st.badgeId === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</optgroup>`).join('')}</select>`
+            : `<div class="badge-pick">${S.badges.map(b => `<label class="pick" style="--c:${b.color}"><input type="radio" name="badge" value="${b.id}" ${st.badgeId === b.id ? 'checked' : ''}><span>${patch(b, 'sm')}<em>${esc(b.name)}</em></span></label>`).join('')}</div>`}</div>
         <div class="field" id="f-people"><div class="lbl"><b>2</b> Participantes <span class="grow"></span><button type="button" class="link" id="p-all">Todos</button><button type="button" class="link" id="p-none">Ninguno</button></div>
           <div class="people-pick">${S.scouts.map(s => `<label class="pp"><input type="checkbox" value="${s.id}" ${st.scoutIds.has(s.id) ? 'checked' : ''}><span>${avatar(s.name, 'sm')}${esc(s.name)}</span></label>`).join('')}</div></div>
         <div class="field"><label class="lbl" for="at"><b>3</b> Nombre de la actividad <small id="anum"></small></label>

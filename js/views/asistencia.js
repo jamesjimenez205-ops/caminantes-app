@@ -39,9 +39,9 @@ Views.asistencia = {
     </section>
 
     ${S.attendance.length ? `
-    <div class="sec-head"><h2>Resumen por Caminante</h2></div>
+    <div class="sec-head"><h2>Resumen por ${esc(Sec().person)}</h2></div>
     <div class="card table-wrap"><table class="progress-table">
-      <thead><tr><th>Caminante</th><th>Presente</th><th>Ausente</th><th>Justificado</th><th>Asistencia</th></tr></thead>
+      <thead><tr><th>${esc(Sec().person)}</th><th>Presente</th><th>Ausente</th><th>Justificado</th><th>Asistencia</th></tr></thead>
       <tbody>${S.scouts.map(s => { const t = Store.attendanceStats(s.id); return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s.name, 'sm')}${esc(s.name)}</a></td>
         <td>${t.P}</td><td>${t.A}</td><td>${t.J}</td><td>${t.total ? `${bar(t.pct)}<small>${t.pct}% de ${plural(t.total, 'reunión', 'reuniones')}</small>` : '<small class="muted">Sin datos</small>'}</td></tr>`; }).join('')}</tbody></table></div>
 
@@ -49,6 +49,6 @@ Views.asistencia = {
     <div class="card list att-hist">${S.attendance.map(a => { const v = Object.values(a.records); return `<div class="row" data-act="att-pick" data-date="${a.date}">
       <span class="grow"><b>${fmtDate(a.date, true)}</b><br><small class="muted">Presentes ${v.filter(x => x === 'P').length} · Ausentes ${v.filter(x => x === 'A').length} · Justificados ${v.filter(x => x === 'J').length}</small></span>
       <button class="icon-btn" data-act="att-del" data-date="${a.date}" aria-label="Borrar">${icon('trash')}</button></div>`; }).join('')}</div>` : ''}`
-    : emptyState('Sin Caminantes', 'Agrega Caminantes para poder tomar asistencia.', '<a class="btn primary" href="#/caminantes">Ir a Caminantes</a>')}`;
+    : emptyState(`Sin ${Sec().people}`, `Agrega ${Sec().people} para poder tomar asistencia.`, `<a class="btn primary" href="#/caminantes">Ir a ${esc(Sec().people)}</a>`)}`;
   },
 };

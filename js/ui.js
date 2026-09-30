@@ -105,5 +105,5 @@ function download(blobOrText, name, type = 'application/json') {
 const emptyState = (title, text, btn = '') => `<div class="empty">${emptyArt()}<h3>${esc(title)}</h3><p>${esc(text)}</p>${btn}</div>`;
 
 // Vistas y manejadores globales (los definen los archivos de views/)
-const Views = {}, Actions = {}, Changes = {};
+const Views = {}, Actions = {}, Changes = {}, Inputs = {};
 const UIState = { attDate: '', actFilter: '', badgeScout: '', report: { from: '', to: '', scoutId: '', badgeId: '', photos: true, progress: true } };

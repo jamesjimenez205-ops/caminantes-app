@@ -21,7 +21,7 @@ Views.reportes = {
       <div class="filter-grid">
         <label>Desde<input type="date" data-change="report-f" data-key="from" value="${esc(r.from)}" min="2000-01-01"></label>
         <label>Hasta<input type="date" data-change="report-f" data-key="to" value="${esc(r.to)}" min="2000-01-01"></label>
-        <label>Caminante${sel('scoutId', S.scouts, 'Todos')}</label>
+        <label>${esc(Sec().person)}${sel('scoutId', S.scouts, 'Todos')}</label>
         <label>Insignia${sel('badgeId', S.badges, 'Todas')}</label>
       </div>
       <div class="opts">

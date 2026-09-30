@@ -7,29 +7,32 @@ function reqChecklist(sid, b) {
 
 Changes['toggle-req'] = async el => { await Store.toggleReq(el.dataset.scout, el.dataset.badge, el.dataset.req); rerender(); };
 
+// Con muchas insignias (Unidad) el perfil muestra solo las que tienen avance
+const profileBadges = sid => (S.badges.length <= 8 ? S.badges : S.badges.filter(b => Store.badgeProgress(sid, b.id).done > 0));
+
 Views.caminantes = {
   render(id) {
     if (id) return this.profile(id);
     return `
     <div class="page-head"><div><h1>${esc(Sec().people)}</h1><p class="sub">${plural(S.scouts.length, 'joven', 'jóvenes')} en ${esc(Sec().short)}</p></div>
-      <button class="btn primary" data-act="new-scout">${icon('plus')} Agregar Caminante</button></div>
+      <button class="btn primary" data-act="new-scout">${icon('plus')} Agregar ${esc(Sec().person)}</button></div>
     ${S.scouts.length ? `<div class="grid scouts">${S.scouts.map(s => {
       const p = Store.scoutProgress(s.id);
       const acts = S.activities.filter(a => a.scoutIds.includes(s.id)).length;
       const doneB = S.badges.filter(b => Store.badgeProgress(s.id, b.id).pct >= 100).length;
       return `<a class="card scout-card" href="#/caminantes/${s.id}">${avatar(s.name, 'lg')}<b class="name">${esc(s.name)}</b>${Sec().features.stages && Store.stageOf(s) ? `<span class="phase p1">Etapa ${Store.stageOf(s)}</span>` : ''}
         <span class="muted">${[ageOf(s.birthdate), plural(acts, 'actividad', 'actividades')].filter(Boolean).join(' · ')}</span>
-        ${bar(p.pct)}<span class="row-between"><small>${p.pct}% general</small><small>${doneB}/${S.badges.length} insignias</small></span></a>`;
-    }).join('')}</div>` : emptyState('Aún no hay Caminantes', 'Agrega a cada joven para poder asignarle actividades e insignias.', `<button class="btn primary" data-act="new-scout">${icon('plus')} Agregar Caminante</button>`)}`;
+        ${bar(p.pct)}<span class="row-between"><small>${p.pct}% general</small><small>${S.badges.length > 8 ? plural(doneB, 'insignia completada', 'insignias completadas') : `${doneB}/${S.badges.length} insignias`}</small></span></a>`;
+    }).join('')}</div>` : emptyState(`Aún no hay ${Sec().people}`, 'Agrega a cada joven para poder asignarle actividades e insignias.', `<button class="btn primary" data-act="new-scout">${icon('plus')} Agregar ${esc(Sec().person)}</button>`)}`;
   },
 
   profile(id) {
     const s = Store.scout(id);
-    if (!s) return emptyState('Caminante no encontrado', '', '<a class="btn" href="#/caminantes">Volver</a>');
+    if (!s) return emptyState(`${Sec().person} no encontrado`, '', '<a class="btn" href="#/caminantes">Volver</a>');
     const p = Store.scoutProgress(id);
     const acts = S.activities.filter(a => a.scoutIds.includes(id));
     return `
-    <a href="#/caminantes" class="back">${icon('back')} Caminantes</a>
+    <a href="#/caminantes" class="back">${icon('back')} ${esc(Sec().people)}</a>
     <section class="profile-head card">
       ${avatar(s.name, 'xl')}
       <div class="grow"><h1>${esc(s.name)}</h1><p class="muted">${[ageOf(s.birthdate), s.birthdate ? 'Nac. ' + fmtDate(s.birthdate) : ''].filter(Boolean).join(' · ')}</p>
@@ -39,13 +42,14 @@ Views.caminantes = {
     </section>
 
     ${Sec().features.stages ? `<div class="sec-head"><h2>Etapa de progresión</h2></div>
-    <section class="card"><ol class="stages">${STAGES.map(st => { const d = s.stages?.[st.k]; return `<li class="${d ? 'on' : ''}">
+    <section class="card"><ol class="stages">${Sec().stages.map(st => { const d = s.stages?.[st.k]; return `<li class="${d ? 'on' : ''}">
       <label class="check"><input type="checkbox" data-change="stage-toggle" data-scout="${id}" data-key="${st.k}" ${d ? 'checked' : ''}><span class="box">${icon('check')}</span></label>
       <div class="grow"><b>${st.name}</b> <small class="muted">${st.age}</small><p class="muted">${st.desc}</p></div>
       ${d ? `<label class="stage-date"><small>Insignia entregada</small><input type="date" data-change="stage-date" data-scout="${id}" data-key="${st.k}" value="${d}"></label>` : '<small class="muted">Pendiente</small>'}</li>`; }).join('')}</ol></section>` : ''}
 
-    <div class="sec-head"><h2>Insignias de competencias</h2></div>
-    <div class="grid badges2">${S.badges.map(b => { const bp = Store.badgeProgress(id, b.id); return `
+    <div class="sec-head"><h2>${Sec().id === 'caminantes' ? 'Insignias de competencias' : 'Insignias'}</h2></div>
+    ${S.badges.length > 8 ? `<p class="muted">Aquí se muestran las insignias con avance. Para marcar requisitos de otra, entra a <a href="#/insignias">Insignias</a>.</p>${!profileBadges(id).length ? '<p class="muted"><em>Todavía no tiene avances.</em></p>' : ''}` : ''}
+    <div class="grid badges2">${profileBadges(id).map(b => { const bp = Store.badgeProgress(id, b.id); return `
       <section class="card badge-block">
         <header>${patch(b)}<div class="grow"><h3>${esc(b.name)}</h3><small class="muted">${bp.done} de ${bp.total} requisitos</small></div>${tag(bp.pct)}</header>
         ${bar(bp.pct)}${reqChecklist(id, b)}
@@ -66,7 +70,7 @@ Actions['edit-scout'] = d => scoutForm(d.id);
 function scoutForm(id) {
   const s = id ? Store.scout(id) : { name: '', birthdate: '', notes: '' };
   openModal(`<form id="scoutform">
-    <header class="modal-head"><h2>${id ? 'Editar Caminante' : 'Nuevo Caminante'}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
+    <header class="modal-head"><h2>${id ? 'Editar' : 'Nuevo'} ${esc(Sec().person)}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
     <div class="modal-body">
       <div class="field"><label class="lbl" for="sn">Nombre completo</label><input id="sn" name="name" value="${esc(s.name)}" required autofocus maxlength="60" autocomplete="off"></div>
       <div class="field"><label class="lbl" for="sb">Fecha de nacimiento <small>(opcional)</small></label><input id="sb" type="date" name="birthdate" value="${esc(s.birthdate)}" min="1990-01-01" max="${today()}"></div>
@@ -82,13 +86,13 @@ function scoutForm(id) {
         const f = new FormData(e.target);
         try {
           const saved = await Store.saveScout({ ...s, id, name: f.get('name'), birthdate: f.get('birthdate'), notes: f.get('notes') });
-          closeModal(); toast('Caminante guardado'); rerender();
+          closeModal(); toast(`${Sec().person} guardado`); rerender();
           if (!id) location.hash = '#/caminantes/' + saved.id;
         } catch (err) { if (!showValidation(e.target, err)) throw err; }
       });
       $('#delscout', m)?.addEventListener('click', async () => {
         if (!confirm(`¿Eliminar a ${s.name}? Se borrará su progreso y saldrá de las actividades.`)) return;
-        await Store.deleteScout(id); closeModal(); toast('Caminante eliminado'); location.hash = '#/caminantes'; rerender();
+        await Store.deleteScout(id); closeModal(); toast(`${Sec().person} eliminado`); location.hash = '#/caminantes'; rerender();
       });
     },
   });

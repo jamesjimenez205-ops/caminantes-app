@@ -58,6 +58,10 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.act-card')) { e.preventDefault(); e.target.click(); }
 });
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-input]');
+  if (el && Object.hasOwn(Inputs, el.dataset.input)) Inputs[el.dataset.input](el);
+});
 document.addEventListener('change', e => {
   const el = e.target.closest('[data-change]');
   if (el && Object.hasOwn(Changes, el.dataset.change)) Changes[el.dataset.change](el);
@@ -73,8 +77,10 @@ Actions['open-sections'] = () => openModal(`
       <b>${esc(s.name)}</b><small>${esc(s.ages)}</small>
       <span class="tag ${s.enabled ? (s.id === Store.section ? 'done' : 'prog') : 'pend'}">${s.enabled ? (s.id === Store.section ? 'Sección actual' : 'Entrar') : 'Próximamente'}</span>
     </button>`).join('')}</div>
-    <p class="muted"><small>Cada sección guarda sus propios ${esc('Caminantes, actividades, insignias y progreso')}, separados de las demás.</small></p></div>`);
-Actions['pick-section'] = async d => { await Store.setSection(d.id); closeModal(); location.hash = '#/inicio'; render(); };
+    <p class="muted"><small>Cada sección guarda sus propios integrantes, actividades, insignias, asistencia y progreso, separados de las demás.</small></p></div>`);
+Actions['pick-section'] = async d => {
+  Object.assign(UIState, { actFilter: '', badgeScout: '', attDate: '' }); Object.assign(UIState.report, { scoutId: '', badgeId: '' });
+  await Store.setSection(d.id); closeModal(); location.hash = '#/inicio'; render(); };
 Actions['logout'] = () => Auth.logout();
 Actions['backup'] = () => openModal(`
   <header class="modal-head"><h2>Respaldo de datos</h2><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>

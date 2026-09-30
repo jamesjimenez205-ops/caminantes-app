@@ -18,7 +18,7 @@ const AREAS = [
 const REQS = [['r1', 'Actividad 1'], ['r2', 'Actividad 2'], ['r3', 'Actividad 3'], ['r5', 'Proyecto final'], ['r6', 'Entrega del informe']];
 const REQ_VERSION = 3;
 const SEED_BADGES = AREAS.map((a, i) => ({
-  ...a, section: 'caminantes', order: i + 1, reqVersion: REQ_VERSION,
+  ...a, section: 'caminantes', group: 'competencia', order: i + 1, reqVersion: REQ_VERSION,
   requirements: REQS.map(([k, text]) => ({ id: a.id + k, text })),
 }));
 const SEED_IDS = new Set(SEED_BADGES.map(b => b.id));
@@ -52,4 +52,31 @@ const HONOR_STEPS = [
   { k: 'consejo', t: 'El consejo de grupo informa a la Dirección Nacional de Programa de Jóvenes' },
   { k: 'direccion', t: 'La Dirección Nacional emite el certificado e insignia, registrados en la asociación' },
   { k: 'entrega', t: 'Entrega de la Condecoración Istmeña al Caminante' },
+];
+
+// ================= UNIDAD SCOUT (11 a 15 años) =================
+// Destrezas (insignias de habilidades) según el documento DESTREZAS del grupo. Sin requisitos: los agrega
+// el grupo (varían según la insignia). Los «Segmentos» se agregan desde Insignias → Agregar insignia.
+const UNIT_DESTREZAS = [
+  'Oficinista', 'Numismático', 'Naturalista', 'Músico', 'Mecánico/a', 'Lector', 'Juegos', 'Jardinero/a', 'Fotógrafo',
+  'Explorador', 'Excursionista', 'Desarrollo personal', 'Deportista', 'Defensa civil', 'Cultura nacionales',
+  'Condiciones físicas', 'Coleccionista', 'Cocinero', 'Ciclista', 'Bombero', 'Baile', 'Atleta', 'Artista', 'Arquero',
+  'Amigos del mundo', 'Amigo de los animales', 'Ajedrez', 'Actriz/Actor', 'Actitud escolar', 'Acampador',
+  'Protocolo y etiqueta', 'Natación', 'Intérprete', 'Inclusión', 'Huella', 'Habilidoso/a', 'Rapel', 'Canal de Panamá',
+  'Turismo', 'Tradiciones indígenas', 'Tiro', 'Servicio a la comunidad', 'Seguridad vial', 'Seguridad marítima',
+  'Seguridad', 'Electricista', 'Robótica', 'Reciclaje', 'Radio', 'Programador', 'Primeros auxilios',
+  'Prevención del crimen', 'Preparador para emergencias', 'Pionero', 'Pesca', 'Patinaje', 'Orientación', 'Orador',
+];
+const UNIT_SEED = [...UNIT_DESTREZAS].sort((a, b) => a.localeCompare(b, 'es')).map((name, i) => ({
+  id: 'd' + String(i + 1).padStart(2, '0'), section: 'unidad', group: 'destreza', order: i + 1, name,
+  description: '', icon: 'award', color: '#3f9a52', requirements: [], reqVersion: REQ_VERSION,
+}));
+
+// Etapas de progresión de Unidad (Dirección Nacional de Programa · El Cómo para el Dirigente de Sección Media).
+// Se entregan con el Consejo de Patrulla, con acuerdo del dirigente encargado del seguimiento.
+const UNIT_STAGES = [
+  { k: 'pista', name: 'Pista', age: '11 a 13 años', desc: 'Cuando el joven o la joven comienza a trabajar con los objetivos personales correspondientes a las edades de 11 a 13 años.' },
+  { k: 'senda', name: 'Senda', age: '12 a 13 años', desc: 'Cuando ha alcanzado aproximadamente la mitad de los objetivos para las edades de 12 a 13 años.' },
+  { k: 'rumbo', name: 'Rumbo', age: '13 a 14 años', desc: 'Desde que ha alcanzado la totalidad, poco más o poco menos, de los objetivos personales para las edades de 13 a 14 años.' },
+  { k: 'travesia', name: 'Travesía', age: '14 a 15 años', desc: 'En el momento en que ha logrado desarrollar con éxito al menos la mitad de los objetivos personales para las edades de 14 a 15 años.' },
 ];

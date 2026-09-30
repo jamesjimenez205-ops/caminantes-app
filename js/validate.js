@@ -85,7 +85,7 @@ const V = (() => {
   function scout(o) {
     obj(o, 'name', 'Caminante');
     const stages = {};
-    for (const st of STAGES) stages[st.k] = o.stages?.[st.k] ? date(o.stages[st.k], { field: 'stage', label: `Fecha de ${st.name}`, required: true }) : null;
+    for (const st of SECTIONS[sec(o.section)].stages) stages[st.k] = o.stages?.[st.k] ? date(o.stages[st.k], { field: 'stage', label: `Fecha de ${st.name}`, required: true }) : null;
     const h = o.honor || {}, checks = {}, steps = {};
     for (const k of ['proyectos', 'progresion', 'participacion', 'impacto']) checks[k] = h.checks?.[k] === true;
     for (const st of HONOR_STEPS) steps[st.k] = h.steps?.[st.k] ? date(h.steps[st.k], { field: 'step', label: 'Fecha del paso', required: true }) : null;
@@ -100,17 +100,22 @@ const V = (() => {
   function reqLines(v, field = 'reqs') {
     const raw = text(v, { field, label: 'Requisitos', max: 30 * 200, multiline: true });
     const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    if (!lines.length) fail(field, 'Requisitos: escribe al menos uno');
     if (lines.length > 30) fail(field, 'Requisitos: máximo 30');
     lines.forEach(l => { if (l.length > 200) fail(field, 'Requisitos: cada uno admite máximo 200 caracteres'); });
     return lines;
+  }
+  function badgeGroup(o) {
+    const keys = SECTIONS[sec(o.section)].groups.map(g => g.k);
+    const g = o.group == null || o.group === '' ? keys[0] : o.group;
+    if (!keys.includes(g)) fail('group', 'Tipo de insignia no válido');
+    return g;
   }
   function badge(o) {
     obj(o, 'name', 'Insignia');
     const reqs = arr(o.requirements, 30, 'reqs', 'Requisitos').map(r => ({ id: id(r?.id, 'reqs'), text: text(r?.text, { field: 'reqs', label: 'Requisito', min: 1, max: 200, required: true }) }));
     if (unique(reqs.map(r => r.id)).length !== reqs.length) fail('reqs', 'Requisitos repetidos');
     return {
-      id: id(o.id), section: sec(o.section), order: int(o.order, { field: 'order', label: 'Orden', min: 1, max: 99 }),
+      id: id(o.id), section: sec(o.section), group: badgeGroup(o), order: int(o.order, { field: 'order', label: 'Orden', min: 1, max: 99 }),
       name: text(o.name, { field: 'name', label: 'Nombre', min: 2, max: 60, required: true }),
       description: text(o.description, { field: 'description', label: 'Descripción', max: 300 }),
       color: color(o.color), icon: icon(o.icon), requirements: reqs,

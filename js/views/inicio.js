@@ -19,6 +19,10 @@ function activityCard(a) {
     </div></article>`;
 }
 
+// Con muchas insignias (Unidad) el inicio muestra solo las que tienen avance (las 8 primeras)
+const homeBadges = () => (S.badges.length <= 8 ? S.badges
+  : S.badges.map(b => [b, Store.groupBadgeProgress(b.id).pct]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 8).map(x => x[0]));
+
 Views.inicio = {
   render() {
     const ov = Store.overall(), { inProg, done } = Store.pairCounts();
@@ -36,7 +40,7 @@ Views.inicio = {
     </section>
 
     <section class="stats">
-      <div class="stat"><span class="stat-ic">${icon('users')}</span><b>${S.scouts.length}</b><span>Caminantes</span></div>
+      <div class="stat"><span class="stat-ic">${icon('users')}</span><b>${S.scouts.length}</b><span>${esc(Sec().people)}</span></div>
       <div class="stat"><span class="stat-ic prog">${icon('compass')}</span><b>${inProg}</b><span>Insignias en progreso</span></div>
       <div class="stat"><span class="stat-ic done">${icon('check')}</span><b>${done}</b><span>Insignias completadas</span></div>
       <div class="stat wide"><span>Progreso general</span><b>${ov.pct}%</b>${bar(ov.pct)}<small>${ov.done} de ${ov.total} requisitos</small></div>
@@ -51,8 +55,8 @@ Views.inicio = {
       </section>
       <section>
         <div class="sec-head"><h2>Insignias del grupo</h2><a href="#/insignias" class="link">Ver requisitos</a></div>
-        <div class="card list">${S.badges.map(b => { const p = Store.groupBadgeProgress(b.id); return `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`; }).join('')}</div>
-        ${!S.scouts.length ? `<div class="card note">${icon('users')}<span>Empieza <a href="#/caminantes">agregando a los Caminantes</a>.</span></div>` : ''}
+        <div class="card list">${homeBadges().map(b => { const p = Store.groupBadgeProgress(b.id); return `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`; }).join('')}</div>
+        ${!S.scouts.length ? `<div class="card note">${icon('users')}<span>Empieza <a href="#/caminantes">agregando a ${esc(Sec().people)}</a>.</span></div>` : ''}
       </section>
     </div>`;
   },

@@ -79,7 +79,7 @@ function svcForm(id) {
       <div class="field" id="f-people"><div class="lbl"><b>1</b> Participantes <span class="grow"></span><button type="button" class="link" id="p-all">Todos</button><button type="button" class="link" id="p-none">Ninguno</button></div>
         <div class="people-pick">${S.scouts.map(s => `<label class="pp"><input type="checkbox" value="${s.id}" ${st.scoutIds.has(s.id) ? 'checked' : ''}><span>${avatar(s, 'sm')}${esc(s.name)}</span></label>`).join('')}</div></div>
       <div class="field two"><div><label class="lbl" for="sd"><b>2</b> Fecha</label><input id="sd" type="date" name="date" value="${esc(ex?.date || today())}" required min="2000-01-01"></div>
-        <div><label class="lbl" for="sh">Horas <small>(por participante)</small></label><input id="sh" name="hours" type="number" step="0.25" min="0.25" max="24" inputmode="decimal" value="${ex ? ex.hours : ''}" placeholder="Ej.: 2.5" required>
+        <div><label class="lbl" for="sh">Horas <small>(por participante)</small></label><input id="sh" name="hours" type="number" step="0.25" min="0.25" inputmode="decimal" value="${ex ? ex.hours : ''}" placeholder="Ej.: 2.5" required>
           <small class="muted" id="hint-h">2.5 = 2 h 30 min</small></div></div>
       <div class="field"><label class="lbl" for="sp"><b>3</b> Lugar</label><input id="sp" name="place" maxlength="100" required autocomplete="off" value="${esc(ex?.place || '')}" placeholder="Ej.: Hogar de ancianos San José"></div>
       <div class="field"><label class="lbl" for="sx">Descripción <small>(qué se hizo)</small></label><textarea id="sx" name="description" rows="3" maxlength="1000" placeholder="Ej.: Limpieza del patio y actividades recreativas con los abuelos.">${esc(ex?.description || '')}</textarea></div>

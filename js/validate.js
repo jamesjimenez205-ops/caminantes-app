@@ -162,7 +162,8 @@ const V = (() => {
   // Labor social: un registro puede tener varios participantes; las horas son POR participante.
   function hoursVal(v) {
     const n = typeof v === 'string' ? Number(v.trim().replace(',', '.')) : v;
-    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0.25 || n > 24) fail('hours', 'Horas: entre 0.25 y 24');
+    // sin tope práctico por registro (el límite solo evita valores absurdos por error de tecleo)
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0.25 || n > 100000) fail('hours', 'Horas: escribe un número desde 0.25');
     if (Math.abs(n * 4 - Math.round(n * 4)) > 1e-9) fail('hours', 'Horas: usa múltiplos de 0.25 (15 minutos)');
     return n;
   }

@@ -412,3 +412,7 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .svc-sum { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .svc-sum .btn { margin-left: auto; }
 .field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 560px) { .field.two { grid-template-columns: 1fr; } }
+
+.req-hrs { width: 96px; flex: none; }
+.hrs-note { font-weight: 600; }
+@media (max-width: 560px) { .req-row { flex-wrap: wrap; } .req-row .req-in { flex-basis: 100%; order: 2; } .req-hrs { order: 3; } }

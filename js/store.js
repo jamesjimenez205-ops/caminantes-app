@@ -37,6 +37,7 @@ const Store = {
     await this.reload();
     if (!S.badges.length) { for (const b of SECTIONS[id].seed) await DB.put('badges', b); await this.reload(); }
     await this.syncAllActivityProgress();
+    await this.syncServiceProgress();
   },
   async init() {
     try { const s = localStorage.getItem('caminantes-seccion'); if (s && Object.hasOwn(SECTIONS, s) && SECTIONS[s].enabled) this.section = s; } catch { /* nada */ }
@@ -82,7 +83,17 @@ const Store = {
       if (b && seed.image && !b.image && !b.photoId) await DB.put('badges', { ...b, image: seed.image });
     }
     await this.reload();
+    // Vínculo con la labor social de las dos insignias de servicio (solo si siguen como las creó la app)
+    const cam = ALL.badges.find(b => b.id === 'a5');
+    if (cam && cam.requirements.find(r => r.id === 'a5r1')?.text === 'Actividad 1') {
+      for (const c of ALL.completions.filter(c => c.reqId === 'a5r3')) await DB.del('completions', c.id);
+      await DB.put('badges', { ...cam, requirements: SEED_BADGES.find(b => b.id === 'a5').requirements.filter(r => r.id !== 'a5r3').map(r => r) });
+    }
+    const uni = UNIT_SEED.find(b => b.name === 'Servicio a la comunidad'), ub = ALL.badges.find(b => b.id === uni.id);
+    if (ub && !ub.requirements.length) await DB.put('badges', { ...ub, requirements: uni.requirements });
+    await this.reload();
     await this.syncAllActivityProgress();
+    await this.syncServiceProgress();
     const OLD = { a1: '#3f6b6b', a2: '#5f8f3e', a3: '#8a5a34', a4: '#a3743f', a5: '#2d5a3d' };
     for (const b of S.badges) {
       if (OLD[b.id] === b.color) await DB.put('badges', { ...b, color: SEED_BADGES.find(x => x.id === b.id).color });
@@ -176,7 +187,7 @@ const Store = {
     const b = V.badge({
       id: bid, section: this.section, group: g.k, order: Math.max(0, ...S.badges.map(x => x.order || 0)) + 1,
       name: input.name, description: input.description ?? '', color: g.color, icon: g.icon, reqVersion: REQ_VERSION,
-      requirements: lines.map((text, i) => ({ id: bid + 'r' + (i + 1), text })),
+      requirements: lines.map((text, i) => ({ id: bid + 'r' + (i + 1), text, ...(opts.hours?.[i] ? { hours: opts.hours[i] } : {}) })),
     });
     await this._setPhoto(b, '', opts, 320);
     await DB.put('badges', b); await this.reload();
@@ -196,7 +207,8 @@ const Store = {
     if (!cur) throw new V.ValidationError('id', 'Insignia inexistente');
     const old = cur.requirements;
     const b = V.badge({ ...cur, name: input.name, description: input.description, group: input.group ?? cur.group, requirements: cur.requirements });
-    b.requirements = lines.map((text, i) => ({ id: old[i]?.id || b.id + 'r' + uid(), text }));
+    const hrs = i => (opts.hours ? opts.hours[i] : old[i]?.hours); // sin horas indicadas se conservan las que ya tenía
+    b.requirements = lines.map((text, i) => ({ id: old[i]?.id || b.id + 'r' + uid(), text, ...(hrs(i) ? { hours: hrs(i) } : {}) }));
     for (const r of old.slice(lines.length)) {
       for (const c of S.completions.filter(c => c.reqId === r.id)) await DB.del('completions', c.id);
     }
@@ -204,6 +216,7 @@ const Store = {
     await this._setPhoto(b, cur.photoId, opts, 320);
     await DB.put('badges', b); await this.reload();
     await this.syncActivityProgress(b.id);
+    await this.syncServiceProgress();
   },
 
   // ---- Progreso
@@ -264,13 +277,15 @@ const Store = {
   async syncActivityProgress(badgeId) {
     const b = this.badge(badgeId);
     if (!b) return;
-    let slots = b.requirements.map(r => r.id);
+    const manualOrHours = b.requirements.filter(r => !r.hours); // los requisitos con horas los marca la labor social
+    let slots = manualOrHours.map(r => r.id);
     if (SECTIONS[this.section].autoProgress !== 'todos') {
-      slots = b.requirements.map(r => ({ id: r.id, n: +(/^Actividad\s+(\d+)$/i.exec(r.text)?.[1] || 0) })).filter(x => x.n).sort((x, y) => x.n - y.n).map(x => x.id);
+      slots = manualOrHours.map(r => ({ id: r.id, n: +(/^Actividad\s+(\d+)$/i.exec(r.text)?.[1] || 0) })).filter(x => x.n).sort((x, y) => x.n - y.n).map(x => x.id);
     }
     const all = await DB.all('completions');
-    const current = new Map(all.filter(c => c.badgeId === badgeId && c.activityId).map(c => [c.id, c]));
-    const taken = new Set(all.filter(c => !(c.badgeId === badgeId && c.activityId)).map(c => c.id));
+    const isAuto = c => c.badgeId === badgeId && c.activityId && c.activityId !== 'labor';
+    const current = new Map(all.filter(isAuto).map(c => [c.id, c]));
+    const taken = new Set(all.filter(c => !isAuto(c)).map(c => c.id));
     const acts = S.activities.filter(x => x.badgeId === badgeId).slice()
       .sort((x, y) => x.date.localeCompare(y.date) || x.createdAt - y.createdAt);
     const want = new Map();
@@ -284,6 +299,29 @@ const Store = {
     let changed = false;
     for (const [id] of current) if (!want.has(id)) { await DB.del('completions', id); changed = true; }
     for (const [id, c] of want) if (current.get(id)?.activityId !== c.activityId) { await DB.put('completions', c); changed = true; }
+    if (changed) await this.reload();
+  },
+  // Requisitos con horas (insignias vinculadas a la labor social): se marcan solos cuando el total de horas de labor
+  // social del joven llega a esa cantidad, y se desmarcan si baja. Solo escribe lo que cambió; lo manual se respeta.
+  async syncServiceProgress() {
+    const badges = S.badges.filter(b => b.requirements.some(r => r.hours));
+    if (!badges.length) return;
+    const all = await DB.all('completions');
+    let changed = false;
+    for (const b of badges) {
+      const current = new Map(all.filter(c => c.badgeId === b.id && c.activityId === 'labor').map(c => [c.id, c]));
+      const taken = new Set(all.filter(c => c.badgeId === b.id && c.activityId !== 'labor').map(c => c.id));
+      const want = new Map();
+      for (const sc of S.scouts) {
+        const h = this.serviceHours(sc.id);
+        for (const r of b.requirements) {
+          const id = sc.id + '_' + r.id;
+          if (r.hours && h >= r.hours && !taken.has(id)) want.set(id, { id, scoutId: sc.id, badgeId: b.id, reqId: r.id, activityId: 'labor', date: today() });
+        }
+      }
+      for (const [id] of current) if (!want.has(id)) { await DB.del('completions', id); changed = true; }
+      for (const [id, c] of want) if (!current.has(id)) { await DB.put('completions', c); changed = true; }
+    }
     if (changed) await this.reload();
   },
   async syncAllActivityProgress() {
@@ -365,6 +403,7 @@ const Store = {
     } else if (removeCert && oldCert) { await DB.del('photos', oldCert); a.certificateId = ''; a.certKind = ''; }
     else { a.certificateId = oldCert; a.certKind = prev?.certKind || ''; }
     await DB.put('service', a); await this.reload();
+    await this.syncServiceProgress();
     return a;
   },
   async deleteService(id) {
@@ -372,6 +411,7 @@ const Store = {
     if (!r) return;
     for (const pid of [...r.evidenceIds, r.certificateId].filter(Boolean)) await DB.del('photos', pid);
     await DB.del('service', id); await this.reload();
+    await this.syncServiceProgress();
   },
 
   // ---- Recordatorios

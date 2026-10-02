@@ -55,3 +55,6 @@ Las 5 áreas de competencia del manual 2019. Los requisitos de cada área vienen
 
 ## Labor social
 Colección `service`: un registro por jornada con participantes (las horas cuentan por participante), fecha, horas (múltiplos de 0.25), lugar, descripción, evidencia (hasta 6 fotos) y certificado (imagen o PDF ≤ 680 KB, guardado en `photos`). Totales por Caminante/Scout en Labor social, en el perfil y en el PDF. **Requiere que las reglas de Firestore incluyan `'service'`** (ver `firestore.rules`).
+
+## Insignias vinculadas a la labor social
+Un requisito puede llevar `hours`: se marca solo cuando el total de horas de labor social del joven (en su sección) llega a esa cantidad, y se desmarca si baja (completions con `activityId: 'labor'`). Vinculadas de fábrica: «Servicio Público» (Caminantes: 50 h y 100 h, más proyecto final e informe) y «Servicio a la comunidad» (Unidad: 50 h y 100 h). Cualquier requisito de cualquier insignia puede vincularse con la casilla «Horas» al editarla.

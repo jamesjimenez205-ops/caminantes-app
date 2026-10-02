@@ -55,7 +55,7 @@ Views.insignias = {
       <ul class="checklist big">${b.requirements.map(r => {
         const n = S.scouts.filter(s => Store.isDone(s.id, r.id)).length;
         return `<li><label><input type="checkbox" data-change="toggle-req" data-scout="${sid}" data-badge="${id}" data-req="${r.id}" ${Store.isDone(sid, r.id) ? 'checked' : ''}>
-          <span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}</span><small class="who">${n}/${S.scouts.length}</small></label></li>`;
+          <span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}${r.hours && sid ? `<small class="muted hrs-note"><br>Labor social: ${fmtHours(Math.min(Store.serviceHours(sid), r.hours))} de ${fmtHours(r.hours)}</small>` : ''}</span><small class="who">${n}/${S.scouts.length}</small></label></li>`;
       }).join('')}</ul>
     </section>` : `<div class="card note">${icon('users')}<span>Agrega <a href="#/caminantes">${esc(Sec().people)}</a> para marcar sus requisitos.</span></div>`}
     <form class="card quick-req" id="quickreq" autocomplete="off">
@@ -101,22 +101,22 @@ function badgeForm(id) {
         <div id="reqrows" class="req-rows"></div>
         <button type="button" class="btn" id="addreq">${icon('plus')} Agregar requisito</button>
         <input type="hidden" name="reqs" id="reqs-h">
-        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas.</small></div>
+        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas. <b>Horas</b> (opcional): si escribes horas en una casilla, ese requisito se marca solo cuando el joven llegue a esas horas de labor social.</small></div>
     </div>
     <footer class="modal-foot">${id ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
     onMount: m => {
       const list = $('#reqrows', m);
       const renumber = () => $$('.req-row', list).forEach((r, i) => { $('.n', r).textContent = i + 1; });
-      const addRow = (val = '', focus = true, after = null) => {
+      const addRow = (val = '', focus = true, after = null, hrs = '') => {
         const d = document.createElement('div'); d.className = 'req-row';
-        d.innerHTML = `<span class="n"></span><input class="req-in" maxlength="500" autocomplete="off" placeholder="Escribe un requisito…" aria-label="Requisito"><button type="button" class="icon-btn req-del" aria-label="Quitar requisito">${icon('x')}</button>`;
-        $('input', d).value = val;
+        d.innerHTML = `<span class="n"></span><input class="req-in" maxlength="500" autocomplete="off" placeholder="Escribe un requisito…" aria-label="Requisito"><input class="req-hrs" type="number" step="0.25" min="0.25" inputmode="decimal" placeholder="Horas" title="Horas de labor social (opcional): el requisito se marca solo al llegar a esas horas" aria-label="Horas de labor social"><button type="button" class="icon-btn req-del" aria-label="Quitar requisito">${icon('x')}</button>`;
+        $('.req-in', d).value = val; $('.req-hrs', d).value = hrs || '';
         if (after) after.after(d); else list.appendChild(d);
         renumber(); if (focus) $('input', d).focus();
         return d;
       };
-      (b.requirements.length ? b.requirements.map(r => r.text) : ['']).forEach(t => addRow(t, false));
+      (b.requirements.length ? b.requirements : [{ text: '' }]).forEach(r => addRow(r.text, false, null, r.hours));
       $('#addreq', m).onclick = () => addRow();
       list.addEventListener('click', e => {
         const del = e.target.closest('.req-del'); if (!del) return;
@@ -141,10 +141,12 @@ function badgeForm(id) {
       });
       $('#badgeform', m).addEventListener('submit', async e => {
         e.preventDefault();
-        $('#reqs-h', m).value = $$('.req-in', m).map(i => i.value.trim()).filter(Boolean).join('\n');
+        const rows = $$('.req-row', m).map(r => [$('.req-in', r).value.trim(), $('.req-hrs', r).value]).filter(x => x[0]);
+        $('#reqs-h', m).value = rows.map(x => x[0]).join(String.fromCharCode(10));
+        const hours = rows.map(x => (x[1] === '' ? 0 : Number(String(x[1]).replace(',', '.'))));
         const f = new FormData(e.target);
         const data = { name: f.get('name'), description: f.get('description'), group: f.get('group') || groupOf(b).k };
-        const opts = { photoFile: $('#ph-file', m).files[0] || null, removePhoto: f.get('rmphoto') === 'on' };
+        const opts = { photoFile: $('#ph-file', m).files[0] || null, removePhoto: f.get('rmphoto') === 'on', hours };
         try {
           if (id) await Store.saveBadge({ id, ...data }, f.get('reqs'), opts);
           else { const nb = await Store.createBadge(data, f.get('reqs'), opts); location.hash = '#/insignias/' + nb.id; }

@@ -119,7 +119,7 @@ const V = (() => {
   }
   function badge(o) {
     obj(o, 'name', 'Insignia');
-    const reqs = arr(o.requirements, 30, 'reqs', 'Requisitos').map(r => ({ id: id(r?.id, 'reqs'), text: text(r?.text, { field: 'reqs', label: 'Requisito', min: 1, max: REQ_MAX, required: true }) }));
+    const reqs = arr(o.requirements, 30, 'reqs', 'Requisitos').map(r => ({ id: id(r?.id, 'reqs'), text: text(r?.text, { field: 'reqs', label: 'Requisito', min: 1, max: REQ_MAX, required: true }), ...(r?.hours ? { hours: hoursVal(r.hours) } : {}) }));
     if (unique(reqs.map(r => r.id)).length !== reqs.length) fail('reqs', 'Requisitos repetidos');
     return {
       id: id(o.id), section: sec(o.section), group: badgeGroup(o), order: int(o.order, { field: 'order', label: 'Orden', min: 1, max: 99 }),

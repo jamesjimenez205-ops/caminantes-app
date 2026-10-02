@@ -2,7 +2,7 @@
 function reqChecklist(sid, b) {
   return `<ul class="checklist">${b.requirements.map(r => `<li><label>
     <input type="checkbox" data-change="toggle-req" data-scout="${sid}" data-badge="${b.id}" data-req="${r.id}" ${Store.isDone(sid, r.id) ? 'checked' : ''}>
-    <span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}</span></label></li>`).join('')}</ul>`;
+    <span class="box">${icon('check')}</span><span class="txt">${esc(r.text)}${r.hours ? `<small class="muted hrs-note"><br>Labor social: ${fmtHours(Math.min(Store.serviceHours(sid), r.hours))} de ${fmtHours(r.hours)}</small>` : ''}</span></label></li>`).join('')}</ul>`;
 }
 
 Changes['toggle-req'] = async el => { await Store.toggleReq(el.dataset.scout, el.dataset.badge, el.dataset.req); rerender(); };

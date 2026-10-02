@@ -17,9 +17,11 @@ const AREAS = [
 // Los ids se mantienen estables entre versiones (r4 quedó libre al quitar la «Actividad 4»).
 const REQS = [['r1', 'Actividad 1'], ['r2', 'Actividad 2'], ['r3', 'Actividad 3'], ['r5', 'Proyecto final'], ['r6', 'Entrega del informe']];
 const REQ_VERSION = 3;
+// «Servicio Público» está vinculada a la labor social: sus actividades son horas acumuladas (50 y 100 h), se marcan solas.
+const SERVICIO_PUBLICO_REQS = [['r1', 'Actividad 1: 50 horas de labor social', 50], ['r2', 'Actividad 2: 100 horas de labor social', 100], ['r5', 'Proyecto final'], ['r6', 'Entrega del informe']];
 const SEED_BADGES = AREAS.map((a, i) => ({
   ...a, section: 'caminantes', group: 'competencia', order: i + 1, reqVersion: REQ_VERSION,
-  requirements: REQS.map(([k, text]) => ({ id: a.id + k, text })),
+  requirements: (a.id === 'a5' ? SERVICIO_PUBLICO_REQS : REQS).map(([k, text, hours]) => ({ id: a.id + k, text, ...(hours ? { hours } : {}) })),
 }));
 const SEED_IDS = new Set(SEED_BADGES.map(b => b.id));
 
@@ -72,7 +74,11 @@ const SLUG = n => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase
 const UNIT_SIN_IMAGEN = new Set(['Electricista']);
 const UNIT_SEED = [...UNIT_DESTREZAS].sort((a, b) => a.localeCompare(b, 'es')).map((name, i) => ({
   id: 'd' + String(i + 1).padStart(2, '0'), section: 'unidad', group: 'destreza', order: i + 1, name,
-  description: '', icon: 'award', color: '#3f9a52', requirements: [], reqVersion: REQ_VERSION,
+  description: '', icon: 'award', color: '#3f9a52', reqVersion: REQ_VERSION,
+  // «Servicio a la comunidad» está vinculada a la labor social (50 y 100 horas acumuladas); las demás no tienen requisitos aún
+  requirements: name === 'Servicio a la comunidad'
+    ? [{ id: 'd' + String(i + 1).padStart(2, '0') + 'r1', text: 'Actividad 1: 50 horas de labor social', hours: 50 }, { id: 'd' + String(i + 1).padStart(2, '0') + 'r2', text: 'Actividad 2: 100 horas de labor social', hours: 100 }]
+    : [],
   image: UNIT_SIN_IMAGEN.has(name) ? '' : 'assets/destrezas/' + SLUG(name) + '.webp',
 }));
 

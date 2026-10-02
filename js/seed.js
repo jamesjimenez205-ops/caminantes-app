@@ -92,8 +92,16 @@ const UNIT_STAGES = [
 ];
 
 // Máximo logro de la Unidad Scout: «Scout Balboa». Va aparte de las destrezas y segmentos (grupo oculto en las listas);
-// sus requisitos los define el grupo (Máximo logro → Editar requisitos).
+// requisitos según «El Cómo para el Dirigente de Sección Media» (Dirección Nacional de Programa); editables en Máximo logro.
 const UNIT_MAXIMO = [{
-  id: 'maximo01', section: 'unidad', group: 'maximo', order: 1, name: 'Scout Balboa', description: 'Máximo logro de la Unidad Scout',
-  icon: 'star', color: '#c9971a', requirements: [], reqVersion: REQ_VERSION, image: '',
+  id: 'maximo01', section: 'unidad', group: 'maximo', order: 1, name: 'Scout Balboa', description: 'Insignia de Logro de la Sección Media',
+  icon: 'star', color: '#c9971a', reqVersion: REQ_VERSION, image: '',
+  requirements: [
+    'Proyecto institucional 1 + 1.',
+    'Progresión de acuerdo a la edad.',
+    'Segmentos de conocimiento del escultismo y civismo.',
+    'Una de las siguientes destrezas: Explorador, Excursionista o Acampador.',
+    'Destreza en Primeros auxilios.',
+    'Una destreza adicional en cada una de las áreas de desarrollo.',
+  ].map((text, i) => ({ id: 'maximo01r' + (i + 1), text })),
 }];

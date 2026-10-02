@@ -27,7 +27,7 @@ Views['maximo-logro'] = {
       <button class="btn" data-act="edit-badge" data-id="${b.id}">${icon('edit')} Editar requisitos</button></div>
     <section class="card honor-intro" style="--c:${b.color}">
       ${patch(b, 'lg')}
-      <div><p><b>${esc(b.name)}</b> es el máximo logro de la Unidad Scout.</p>
+      <div><p>${esc(Sec().honorIntro)}</p>
       <p class="muted">${b.requirements.length ? `${plural(b.requirements.length, 'requisito', 'requisitos')}. Marca el avance de cada Scout y registra la fecha de entrega.` : 'Todavía no tiene requisitos: agrégalos con «Editar requisitos» (uno o varios).'}</p></div>
     </section>
     ${S.scouts.length ? S.scouts.map(s => this.unitCard(s, b)).join('')

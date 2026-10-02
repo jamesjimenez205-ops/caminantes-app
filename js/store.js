@@ -93,7 +93,9 @@ const Store = {
     const uni = UNIT_SEED.find(b => b.name === 'Servicio a la comunidad'), ub = ALL.badges.find(b => b.id === uni.id);
     if (ub && !ub.requirements.length) await DB.put('badges', { ...ub, requirements: uni.requirements });
     for (const sec of Object.values(SECTIONS)) for (const b of sec.seed.filter(x => x.group === 'maximo')) {
-      if (!ALL.badges.some(x => x.id === b.id)) await DB.put('badges', b);
+      const have = ALL.badges.find(x => x.id === b.id);
+      if (!have) await DB.put('badges', b);
+      else if (!have.requirements.length) await DB.put('badges', { ...have, description: have.description || b.description, requirements: b.requirements }); // aún sin requisitos: se cargan los oficiales
     }
     await this.reload();
     await this.syncAllActivityProgress();

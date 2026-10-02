@@ -34,11 +34,11 @@ function progScoutFold(s, list) {
   const shown = rows.sort((x, y) => y[1].pct - x[1].pct);
   return `<details class="fold scout-fold" data-scout="${s.id}" ${UIState.openScouts.has(s.id) ? 'open' : ''}>
     <summary>${avatar(s, 'sm')}<b class="grow">${esc(s.name)}</b>
-      <span class="sum-stats"><span>${rows.length} ${rows.length === 1 ? 'elegida' : 'elegidas'}</span><span>${doneN} completadas</span><span>${progN} en progreso</span></span><span class="sum-bar">${bar(st.pct)}</span><b class="sum-pct">${st.pct}%</b></summary>
+      <span class="sum-stats"><span>${list.some(b => Store.isOptional(b)) ? rows.length + (rows.length === 1 ? ' elegida' : ' elegidas') : rows.length + ' áreas'}</span><span>${doneN} completadas</span><span>${progN} en progreso</span></span><span class="sum-bar">${bar(st.pct)}</span><b class="sum-pct">${st.pct}%</b></summary>
     <div class="fold-body">
-      <div class="extras">${progExtras(s)} <a class="link" href="#/caminantes/${s.id}">Ver perfil</a>${list.some(b => Store.isOptional(b)) ? ` <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button>` : ''}</div>
+      <div class="extras">${Store.stageOf(s) ? `<span class="chip-mini">${icon('compass')} ${esc(Store.stageOf(s))}</span>` : ''}${progExtras(s)} <a class="link" href="#/caminantes/${s.id}">Ver perfil</a>${list.some(b => Store.isOptional(b)) ? ` <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button>` : ''}</div>
       ${shown.length ? `<div class="card list">${shown.map(([b, p]) => `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.total ? `${p.done}/${p.total}` : '—'}</span></a>`).join('')}</div>`
-        : `<p class="muted">Todavía no tiene ${esc(list[0]?.group === 'destreza' || Sec().groups.find(g => g.optional) ? 'destrezas elegidas' : 'insignias')}. <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button></p>`}
+        : `<p class="muted">Todavía no tiene ${esc(list.some(b => Store.isOptional(b)) ? 'destrezas elegidas' : 'insignias')}.${list.some(b => Store.isOptional(b)) ? ` <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button>` : ''}</p>`}
     </div></details>`;
 }
 
@@ -78,23 +78,15 @@ Views.progreso = {
     return head + (progGroups().length > 1 ? this.byType() : this.single());
   },
 
-  // Una sola lista de insignias (Caminantes): matriz de jóvenes × insignias
+  // Una sola lista de insignias (Caminantes): avance por área y detalle desplegable por Caminante
   single() {
-    const many = S.badges.length > 8;
+    const rows = S.badges.map(b => [b, Store.groupBadgeProgress(b.id)]).sort((x, y) => y[1].pct - x[1].pct);
+    const alcanzadas = S.scouts.filter(s => Store.areasReached(s.id).length === S.badges.length && S.badges.length).length;
     return `
-    <div class="sec-head"><h2>Insignias del grupo</h2></div>
-    <section class="card overall-card"><div class="badge-bars wide-bars">${S.badges.map(b => { const p = Store.groupBadgeProgress(b.id); return `<div class="bb"><a href="#/insignias/${b.id}">${patch(b, 'sm')}</a><span class="grow"><span class="row-between"><b>${esc(b.name)}</b><small>${p.pct}%</small></span>${bar(p.pct)}</span></div>`; }).join('')}</div></section>
-    <div class="sec-head"><h2>Por ${esc(Sec().person)}</h2></div>
-    <div class="card table-wrap"><table class="progress-table">
-      <thead><tr><th>${esc(Sec().person)}</th>${many ? '<th>En progreso</th><th>Completadas</th>' : S.badges.map(b => `<th><span class="th-b">${patch(b, 'xs')}${esc(b.name)}</span></th>`).join('')}<th>General</th><th>Labor social</th><th>Asistencia</th></tr></thead>
-      <tbody>${S.scouts.map(s => {
-        const p = Store.scoutProgress(s.id), a = Store.attendanceStats(s.id);
-        return `<tr><td><a class="who-link" href="#/caminantes/${s.id}">${avatar(s, 'sm')}${esc(s.name)}</a></td>
-          ${many ? `<td>${S.badges.filter(b => { const x = Store.badgeProgress(s.id, b.id).pct; return x > 0 && x < 100; }).length}</td><td>${S.badges.filter(b => Store.badgeProgress(s.id, b.id).pct >= 100).length}</td>`
-            : S.badges.map(b => { const bp = Store.badgeProgress(s.id, b.id); return `<td>${bar(bp.pct)}<small>${bp.done}/${bp.total}</small></td>`; }).join('')}
-          <td><b>${p.pct}%</b></td><td>${fmtHours(Store.serviceHours(s.id))}</td><td>${a.total ? a.pct + '%' : '—'}</td></tr>`;
-      }).join('')}</tbody></table></div>
-    <div class="legend"><span><i class="dot pend"></i>Sin iniciar</span><span><i class="dot prog"></i>En progreso</span><span><i class="dot done"></i>Completada</span></div>`;
+    <div class="sec-head"><h2>Avance por área de competencia</h2><small class="muted">Promedio del grupo</small></div>
+    <section class="card overall-card"><div class="badge-bars wide-bars">${rows.map(([b, p]) => `<div class="bb"><a href="#/insignias/${b.id}">${patch(b, 'sm')}</a><span class="grow"><span class="row-between"><b>${esc(b.name)}</b><small>${p.done} de ${p.total} requisitos · ${p.pct}%</small></span>${bar(p.pct)}<small class="muted">${plural(S.scouts.filter(s => Store.badgeProgress(s.id, b.id).pct >= 100).length, 'completada', 'completadas')} por ${plural(S.scouts.filter(s => Store.badgeProgress(s.id, b.id).pct >= 100).length, Sec().person, Sec().people)}</small></span></div>`).join('')}</div></section>
+    <div class="sec-head"><h2>Por ${esc(Sec().person)}</h2><small class="muted">${alcanzadas ? plural(alcanzadas, 'con todas las áreas', 'con todas las áreas') + ' · ' : ''}Toca un nombre para ver el detalle</small></div>
+    <div class="stack-tight">${[...S.scouts].sort((x, y) => Store.scoutProgress(y.id).pct - Store.scoutProgress(x.id).pct).map(s => progScoutFold(s, S.badges)).join('')}</div>`;
   },
 
   // Varios tipos (Unidad): pestañas Destrezas / Segmentos, cada una con su propio resumen

@@ -74,3 +74,6 @@ El perfil muestra primero el avance hacia el **Scout Balboa** (requisitos, estad
 
 ## Scout Balboa automático
 Los requisitos comprobables se marcan solos al cumplirse (y se desmarcan si dejan de cumplirse): *Segmentos* (todos completos), *una de Explorador/Excursionista/Acampador* y *Primeros auxilios* (insignia completa, con requisitos). Proyecto, progresión y áreas de desarrollo se marcan a mano. Lo marcado a mano se respeta (`Store.MAXIMO_AUTO`, `syncMaximoProgress`).
+
+## Progreso de Caminantes
+Avance por área (requisitos, % y cuántos la completaron) y un detalle desplegable por Caminante (etapa, labor social, asistencia y avance por área), ordenados de mayor a menor avance. Reemplaza la matriz anterior.

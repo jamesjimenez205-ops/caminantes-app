@@ -20,7 +20,7 @@ const SECTIONS = {
     honorIntro: 'La Insignia Scout Balboa es la Insignia de Logro de la Sección Media. Es concedida por el Consejo de Unidad a los jóvenes que, además de demostrar compromiso con los valores del movimiento scout en todos los aspectos de su vida, cumplen con los requisitos de abajo.',
     groups: [
       { k: 'segmento', name: 'Segmentos', one: 'Segmento', color: '#d9a21b', icon: 'star' },
-      { k: 'destreza', name: 'Destrezas', one: 'Destreza', color: '#3f9a52', icon: 'award' },
+      { k: 'destreza', name: 'Destrezas', one: 'Destreza', color: '#3f9a52', icon: 'award', optional: true }, // cada joven elige las que le gustan
       { k: 'maximo', name: 'Máximo logro', one: 'Máximo logro', color: '#c9971a', icon: 'star', hidden: true },
     ],
     seed: [...UNIT_SEED, ...UNIT_MAXIMO],

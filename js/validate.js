@@ -90,7 +90,7 @@ const V = (() => {
     for (const k of ['proyectos', 'progresion', 'participacion', 'impacto']) checks[k] = h.checks?.[k] === true;
     for (const st of HONOR_STEPS) steps[st.k] = h.steps?.[st.k] ? date(h.steps[st.k], { field: 'step', label: 'Fecha del paso', required: true }) : null;
     return {
-      id: optId(o.id, 'id') || undefined, section: sec(o.section), photoId: optId(o.photoId, 'photo') || '', name: personName(o.name), birthdate: birth(o.birthdate),
+      id: optId(o.id, 'id') || undefined, section: sec(o.section), photoId: optId(o.photoId, 'photo') || '', chosen: unique(arr(o.chosen ?? [], 100, 'chosen', 'Destrezas elegidas').map(x => id(x, 'chosen', 'Destreza'))), name: personName(o.name), birthdate: birth(o.birthdate),
       notes: text(o.notes, { field: 'notes', label: 'Notas', max: 500, multiline: true }),
       createdAt: Number.isFinite(o.createdAt) ? o.createdAt : undefined,
       stages, honor: { checks, proyectoPct: int(h.proyectoPct ?? 0, { field: 'proyectoPct', label: 'Porcentaje del proyecto' }), steps },

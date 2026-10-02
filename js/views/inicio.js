@@ -20,8 +20,13 @@ function activityCard(a) {
 }
 
 // Con muchas insignias el inicio muestra solo las que tienen avance (las 8 primeras)
-const homeTop = list => (list.length <= 8 ? list
-  : list.map(b => [b, Store.groupBadgeProgress(b.id).pct]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 8).map(x => x[0]));
+const homeTop = list => {
+  // destrezas: solo las que algún joven eligió o trabaja (nadie tiene que ganarlas todas)
+  if (list.some(b => Store.isOptional(b))) {
+    return list.filter(b => Store.workers(b.id).length).sort((x, y) => Store.groupBadgeProgress(y.id).pct - Store.groupBadgeProgress(x.id).pct).slice(0, 8);
+  }
+  return list.length <= 8 ? list : list.map(b => [b, Store.groupBadgeProgress(b.id).pct]).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 8).map(x => x[0]);
+};
 const homeRows = list => list.map(b => { const p = Store.groupBadgeProgress(b.id); return `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`; }).join('');
 
 // Insignias del inicio. Con varios tipos (Unidad) se separan: Destrezas y Segmentos, cada uno con su lista.
@@ -35,7 +40,7 @@ function homeBadgeBlock() {
     const all = S.badges.filter(b => (b.group || groups[0].k) === g.k), shown = homeTop(all);
     return `<div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${all.length})</small></h2><a href="#/insignias/${g.k}" class="link">Ver todas</a></div>
       ${shown.length ? `<div class="card list">${homeRows(shown)}</div>`
-        : `<p class="muted home-empty">${all.length ? 'Todavía sin avances.' : `Aún no hay ${esc(g.name.toLowerCase())}.`}</p>`}`;
+        : `<p class="muted home-empty">${all.length ? (g.optional ? `Ningún ${esc(Sec().person)} ha elegido ${esc(g.name.toLowerCase())} todavía.` : 'Todavía sin avances.') : `Aún no hay ${esc(g.name.toLowerCase())}.`}</p>`}`;
   }).join('');
 }
 

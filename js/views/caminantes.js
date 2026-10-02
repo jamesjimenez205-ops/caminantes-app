@@ -8,7 +8,7 @@ function reqChecklist(sid, b) {
 Changes['toggle-req'] = async el => { await Store.toggleReq(el.dataset.scout, el.dataset.badge, el.dataset.req); rerender(); };
 
 // Con muchas insignias (Unidad) el perfil muestra solo las que tienen avance
-const profileBadges = sid => (S.badges.length <= 8 ? S.badges : S.badges.filter(b => Store.badgeProgress(sid, b.id).done > 0));
+const profileBadges = sid => (S.badges.length <= 8 ? S.badges : Store.planBadges(sid));
 
 Views.caminantes = {
   render(id) {
@@ -47,8 +47,8 @@ Views.caminantes = {
       <div class="grow"><b>${st.name}</b> <small class="muted">${st.age}</small><p class="muted">${st.desc}</p></div>
       ${d ? `<label class="stage-date"><small>Insignia entregada</small><input type="date" data-change="stage-date" data-scout="${id}" data-key="${st.k}" value="${d}"></label>` : '<small class="muted">Pendiente</small>'}</li>`; }).join('')}</ol></section>` : ''}
 
-    <div class="sec-head"><h2>${Sec().id === 'caminantes' ? 'Insignias de competencias' : 'Insignias'}</h2></div>
-    ${S.badges.length > 8 ? `<p class="muted">Aquí se muestran las insignias con avance. Para marcar requisitos de otra, entra a <a href="#/insignias">Insignias</a>.</p>${!profileBadges(id).length ? '<p class="muted"><em>Todavía no tiene avances.</em></p>' : ''}` : ''}
+    <div class="sec-head"><h2>${Sec().id === 'caminantes' ? 'Insignias de competencias' : 'Insignias'}</h2>${S.badges.some(b => Store.isOptional(b)) ? `<button class="btn" data-act="pick-destrezas" data-scout="${id}">${icon('plus')} Elegir destrezas</button>` : ''}</div>
+    ${S.badges.length > 8 ? `<p class="muted">Aquí van sus segmentos y las destrezas que <b>eligió</b> o ya trabaja (las destrezas no se ganan todas: cada joven elige las suyas). Para marcar requisitos de otra, entra a <a href="#/insignias">Insignias</a>.</p>${!profileBadges(id).length ? '<p class="muted"><em>Todavía no tiene insignias en su plan.</em></p>' : ''}` : ''}
     <div class="grid badges2">${profileBadges(id).map(b => { const bp = Store.badgeProgress(id, b.id); return `
       <section class="card badge-block">
         <header>${patch(b)}<div class="grow"><h3>${esc(b.name)}</h3><small class="muted">${bp.done} de ${bp.total} requisitos</small></div>${tag(bp.pct)}</header>
@@ -69,6 +69,32 @@ Views.caminantes = {
 };
 
 Actions['new-scout'] = () => scoutForm();
+// Elegir las destrezas que trabaja un joven (con buscador)
+Inputs['pick-q'] = el => {
+  const q = normTxt(el.value.trim());
+  $$('#pickdest .pp').forEach(l => { l.hidden = !!q && !normTxt(l.dataset.name).includes(q); });
+};
+Actions['pick-destrezas'] = d => {
+  const s = Store.scout(d.scout);
+  if (!s) return;
+  const list = S.badges.filter(b => Store.isOptional(b));
+  openModal(`<form id="pickdest">
+    <header class="modal-head"><h2>Destrezas de ${esc(s.name)}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
+    <div class="modal-body"><p class="muted">Marca las destrezas que le gustan o en las que tiene talento. No se ganan todas: solo cuentan las que elija.</p>
+      <div class="search"><input type="search" data-input="pick-q" placeholder="Buscar destreza…" maxlength="60" autocomplete="off" aria-label="Buscar destreza"></div>
+      <div class="people-pick pick-list">${list.map(b => { const chosen = Store.isChosen(s.id, b.id), plan = Store.inPlan(s.id, b); return `<label class="pp" data-name="${esc(b.name)}"><input type="checkbox" value="${b.id}" ${plan ? 'checked' : ''} ${plan && !chosen ? 'disabled' : ''}><span>${patch(b, 'xs')}${esc(b.name)}${plan && !chosen ? ' <small>(con avance)</small>' : ''}</span></label>`; }).join('')}</div></div>
+    <footer class="modal-foot"><button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
+    wide: true,
+    onMount: m => $('#pickdest', m).addEventListener('submit', async e => {
+      e.preventDefault();
+      const ids = $$('input[type=checkbox]:not(:disabled):checked', m).map(i => i.value);
+      try {
+        await Store.saveScout({ ...structuredClone(Store.scout(s.id)), chosen: ids });
+        closeModal(); toast('Destrezas guardadas'); rerender();
+      } catch (err) { if (!showValidation(e.target, err)) throw err; }
+    }),
+  });
+};
 Actions['edit-scout'] = d => scoutForm(d.id);
 
 function scoutForm(id) {

@@ -3,17 +3,18 @@
 const progGroups = () => Sec().groups.filter(g => !g.hidden);
 const progTabs = () => [...progGroups()].reverse(); // Destrezas primero, luego Segmentos
 const progBadgesOf = g => S.badges.filter(b => (b.group || progGroups()[0].k) === g.k);
-const progSum = (sid, list) => Store._sum(list.map(b => [sid, b.id]));
+const progSum = (sid, list) => Store._sum(list.filter(b => Store.inPlan(sid, b)).map(b => [sid, b.id]));
 
 // Cuántas insignias (por joven) están completas / en progreso, y el avance ponderado por requisitos
 function progStats(list) {
-  const pairs = S.scouts.flatMap(s => list.map(b => [s.id, b.id]));
+  // solo cuentan las insignias del plan de cada joven (las destrezas que eligió o ya trabaja)
+  const pairs = S.scouts.flatMap(s => list.filter(b => Store.inPlan(s.id, b)).map(b => [s.id, b.id]));
   let done = 0, prog = 0;
   for (const [sid, bid] of pairs) {
     const p = Store.badgeProgress(sid, bid);
     if (p.total && p.pct >= 100) done++; else if (p.pct > 0) prog++;
   }
-  return { ...Store._sum(pairs), insigniasCompletas: done, insigniasEnProgreso: prog };
+  return { ...Store._sum(pairs), insigniasCompletas: done, insigniasEnProgreso: prog, elegidas: pairs.length, jovenes: new Set(pairs.map(p => p[0])).size };
 }
 
 const progStat = (icono, valor, texto, cls = '') => `<div class="stat"><span class="stat-ic ${cls}">${icon(icono)}</span><b>${valor}</b><span>${texto}</span></div>`;
@@ -28,26 +29,28 @@ const progExtras = s => {
 // Un joven: tarjeta desplegable con sus insignias del tipo
 function progScoutFold(s, list) {
   const st = progSum(s.id, list);
-  const rows = list.map(b => [b, Store.badgeProgress(s.id, b.id)]);
+  const rows = list.filter(b => Store.inPlan(s.id, b)).map(b => [b, Store.badgeProgress(s.id, b.id)]);
   const doneN = rows.filter(([, p]) => p.total && p.pct >= 100).length, progN = rows.filter(([, p]) => p.pct > 0 && p.pct < 100).length;
-  const shown = rows.filter(([, p]) => p.pct > 0).sort((x, y) => y[1].pct - x[1].pct);
+  const shown = rows.sort((x, y) => y[1].pct - x[1].pct);
   return `<details class="fold scout-fold" data-scout="${s.id}" ${UIState.openScouts.has(s.id) ? 'open' : ''}>
     <summary>${avatar(s, 'sm')}<b class="grow">${esc(s.name)}</b>
-      <span class="sum-stats"><span>${doneN} completadas</span><span>${progN} en progreso</span></span><span class="sum-bar">${bar(st.pct)}</span><b class="sum-pct">${st.pct}%</b></summary>
+      <span class="sum-stats"><span>${rows.length} ${rows.length === 1 ? 'elegida' : 'elegidas'}</span><span>${doneN} completadas</span><span>${progN} en progreso</span></span><span class="sum-bar">${bar(st.pct)}</span><b class="sum-pct">${st.pct}%</b></summary>
     <div class="fold-body">
-      <div class="extras">${progExtras(s)} <a class="link" href="#/caminantes/${s.id}">Ver perfil</a></div>
+      <div class="extras">${progExtras(s)} <a class="link" href="#/caminantes/${s.id}">Ver perfil</a>${list.some(b => Store.isOptional(b)) ? ` <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button>` : ''}</div>
       ${shown.length ? `<div class="card list">${shown.map(([b, p]) => `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.total ? `${p.done}/${p.total}` : '—'}</span></a>`).join('')}</div>`
-        : '<p class="muted">Todavía sin avances en este tipo.</p>'}
+        : `<p class="muted">Todavía no tiene ${esc(list[0]?.group === 'destreza' || Sec().groups.find(g => g.optional) ? 'destrezas elegidas' : 'insignias')}. <button class="link" data-act="pick-destrezas" data-scout="${s.id}">Elegir destrezas</button></p>`}
     </div></details>`;
 }
 
 // Insignias con más avance del grupo
 function progBadgeList(list) {
-  const all = list.map(b => [b, Store.groupBadgeProgress(b.id)]);
-  const withProg = all.filter(([, p]) => p.pct > 0).sort((x, y) => y[1].pct - x[1].pct);
+  const opt = list.some(b => Store.isOptional(b));
+  const all = list.map(b => [b, Store.groupBadgeProgress(b.id), Store.workers(b.id).length]);
+  // destrezas: solo las que algún joven eligió o trabaja (nadie tiene que ganarlas todas)
+  const withProg = all.filter(([, p, n]) => (opt ? n > 0 : p.pct > 0)).sort((x, y) => y[1].pct - x[1].pct || y[2] - x[2]);
   const base = UIState.progAll ? all.sort((x, y) => y[1].pct - x[1].pct || x[0].name.localeCompare(y[0].name, 'es')) : withProg.slice(0, 12);
-  if (!base.length) return `<p class="muted">${list.length ? 'Todavía no hay avances en este tipo.' : 'Aún no hay insignias de este tipo.'}</p>`;
-  return `<div class="card list">${base.map(([b, p]) => `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`).join('')}</div>
+  if (!base.length) return `<p class="muted">${list.length ? (opt ? `Ningún ${esc(Sec().person)} ha elegido destrezas todavía: elígelas desde su perfil o desde cada destreza.` : 'Todavía no hay avances en este tipo.') : 'Aún no hay insignias de este tipo.'}</p>`;
+  return `<div class="card list">${base.map(([b, p, n]) => `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}${opt ? `<small class="muted">${n ? plural(n, Sec().person, Sec().people) + ' la ' + (n === 1 ? 'trabaja' : 'trabajan') : 'Nadie la ha elegido'}</small>` : ''}</span><span class="pct">${n || !opt ? p.pct + '%' : '—'}</span></a>`).join('')}</div>
     ${list.length > 12 || UIState.progAll ? `<p><button class="link" data-act="prog-all">${UIState.progAll ? 'Mostrar solo las que tienen avance' : `Ver las ${list.length} insignias`}</button></p>` : ''}`;
 }
 
@@ -104,7 +107,7 @@ Views.progreso = {
     <section class="stats stats-3">
       ${progStat('award', st.insigniasCompletas, `${esc(g.name)} completadas`, 'done')}
       ${progStat('compass', st.insigniasEnProgreso, `${esc(g.name)} en progreso`, 'prog')}
-      ${progWide(`Progreso en ${esc(g.name.toLowerCase())}`, st)}
+      ${g.optional ? `<div class="stat wide"><span>Progreso en las ${esc(g.name.toLowerCase())} elegidas</span><b>${st.pct}%</b>${bar(st.pct)}<small>${st.done} de ${st.total} requisitos · ${plural(st.elegidas, 'elegida', 'elegidas')} por ${plural(st.jovenes, Sec().person, Sec().people)} (no se ganan todas: cada joven elige las suyas)</small></div>` : progWide(`Progreso en ${esc(g.name.toLowerCase())}`, st)}
     </section>
     <div class="sec-head"><h2>${esc(g.name)} con más avance</h2><a class="link" href="#/insignias/${g.k}">Ver todas</a></div>
     ${progBadgeList(list)}

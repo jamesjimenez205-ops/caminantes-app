@@ -1,4 +1,5 @@
 Changes['pick-scout'] = el => { UIState.badgeScout = el.value; rerender(); };
+Changes['choose'] = async el => { try { await Store.setChosen(el.dataset.scout, el.dataset.badge, el.checked); } catch (err) { if (err instanceof V.ValidationError) toast(err.message, 'err'); else throw err; } rerender(); };
 
 const normTxt = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 // Buscador: filtra las tarjetas en pantalla sin volver a dibujar (no pierde el cursor)
@@ -24,7 +25,7 @@ function badgeCard(b) {
   return `<a class="card badge-card" href="#/insignias/${b.id}" style="--c:${b.color}" data-name="${esc(b.name)}">
     <div class="badge-top">${patch(b, 'lg')}<svg viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40V26l30-16 25 14 35-22 40 26 30-14 40 18v8z" fill="rgba(255,255,255,.14)"/></svg></div>
     <div class="badge-info"><h3>${esc(b.name)}</h3>${b.description ? `<p class="muted">${esc(b.description)}</p>` : ''}
-    ${bar(p.pct)}<span class="row-between"><small>${b.requirements.length ? plural(b.requirements.length, 'requisito', 'requisitos') : 'Sin requisitos aún'}</small><small>${p.pct}% del grupo</small></span></div></a>`;
+    ${bar(p.pct)}<span class="row-between"><small>${b.requirements.length ? plural(b.requirements.length, 'requisito', 'requisitos') : 'Sin requisitos aún'}</small><small>${Store.isOptional(b) ? (Store.workers(b.id).length ? 'Elegida por ' + plural(Store.workers(b.id).length, Sec().person, Sec().people) : 'Nadie la ha elegido') : p.pct + '% del grupo'}</small></span></div></a>`;
 }
 
 Views.insignias = {
@@ -69,6 +70,8 @@ Views.insignias = {
       ${patch(b, 'lg')}<div class="grow"><small class="muted">${esc(groupOf(b).one)}</small><h1>${esc(b.name)}</h1>${b.description ? `<p class="muted">${esc(b.description)}</p>` : ''}</div>
       <button class="btn" data-act="edit-badge" data-id="${id}">${icon('edit')} Editar</button>
     </section>
+    ${Store.isOptional(b) && S.scouts.length ? `<section class="card choose-card"><div class="lbl">Quién trabaja esta destreza <small>(no todos la ganan: cada joven elige la que le gusta o en la que tiene talento)</small></div>
+      <div class="people-pick">${S.scouts.map(s => { const chosen = Store.isChosen(s.id, id), plan = Store.inPlan(s.id, b); return `<label class="pp"><input type="checkbox" data-change="choose" data-scout="${s.id}" data-badge="${id}" ${plan ? 'checked' : ''} ${plan && !chosen ? 'disabled' : ''}><span>${avatar(s, 'sm')}${esc(s.name)}${plan && !chosen ? ' <small>(ya tiene avance)</small>' : ''}</span></label>`; }).join('')}</div></section>` : ''}
     ${!b.requirements.length ? `<div class="card note">${icon('alert')}<span>Esta insignia aún no tiene requisitos. Agrega el primero abajo (puede ser uno solo o varios).</span></div>`
       : S.scouts.length ? `
     <section class="card">

@@ -65,3 +65,6 @@ Un requisito puede llevar `hours`: se marca solo cuando el total de horas de lab
 
 ## Progreso
 Resumen arriba (insignias completas, en progreso, labor social, progreso general). Caminantes: tarjetas por área y matriz de jóvenes × insignias (con labor social y asistencia). Unidad: pestañas **Destrezas / Segmentos**, cada una con su resumen, las insignias con más avance y un detalle desplegable por Scout (con su labor social y asistencia).
+
+## Destrezas: cada joven elige las suyas
+El tipo «Destrezas» es opcional (`optional: true` en `SECTIONS`): nadie tiene que ganarlas todas. El plan de un joven = Segmentos (cuentan para todos) + las destrezas que **eligió** (`scout.chosen`) o en las que ya tiene avance/participó en una actividad. El progreso del joven, del grupo, de cada destreza y del inicio se calcula solo sobre ese plan (`Store.inPlan`, `planBadges`, `workers`). Se elige desde el perfil («Elegir destrezas») o desde la ficha de cada destreza («Quién trabaja esta destreza»).

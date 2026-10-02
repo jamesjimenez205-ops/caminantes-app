@@ -247,12 +247,29 @@ const Store = {
     pairs.forEach(([s, b]) => { const p = this.badgeProgress(s, b); done += p.done; total += p.total; });
     return { done, total, pct: pct(done, total) };
   },
-  scoutProgress(sid) { return this._sum(S.badges.map(b => [sid, b.id])); },
-  groupBadgeProgress(bid) { return this._sum(S.scouts.map(s => [s.id, bid])); },
-  overall() { return this._sum(S.scouts.flatMap(s => S.badges.map(b => [s.id, b.id]))); },
+  // Destrezas (tipo «optional»): no se gana todo, cada joven elige las suyas. Solo cuentan las que el joven trabaja:
+  // las que eligió, o en las que ya tiene avance o participó en una actividad. Lo demás (p. ej. Segmentos) cuenta para todos.
+  isOptional(b) { const g = SECTIONS[this.section].groups.find(x => x.k === (b.group || SECTIONS[this.section].groups[0].k)); return !!g?.optional; },
+  isChosen(sid, bid) { return !!this.scout(sid)?.chosen?.includes(bid); },
+  inPlan(sid, b) {
+    if (!this.isOptional(b)) return true;
+    return this.isChosen(sid, b.id) || S.completions.some(c => c.scoutId === sid && c.badgeId === b.id)
+      || S.activities.some(a => a.badgeId === b.id && a.scoutIds.includes(sid));
+  },
+  planBadges(sid) { return S.badges.filter(b => this.inPlan(sid, b)); },
+  workers(bid) { const b = this.badge(bid); return b ? S.scouts.filter(s => this.inPlan(s.id, b)) : []; },
+  async setChosen(sid, bid, on) {
+    const sc = this.scout(sid), b = this.badge(bid);
+    if (!sc || !b) throw new V.ValidationError('chosen', 'Datos no válidos');
+    const set = new Set(sc.chosen || []); on ? set.add(bid) : set.delete(bid);
+    await this.saveScout({ ...structuredClone(sc), chosen: [...set] });
+  },
+  scoutProgress(sid) { return this._sum(this.planBadges(sid).map(b => [sid, b.id])); },
+  groupBadgeProgress(bid) { return this._sum(this.workers(bid).map(s => [s.id, bid])); },
+  overall() { return this._sum(S.scouts.flatMap(s => this.planBadges(s.id).map(b => [s.id, b.id]))); },
   pairCounts() {
     let inProg = 0, done = 0;
-    S.scouts.forEach(s => S.badges.forEach(b => { const p = this.badgeProgress(s.id, b.id).pct; if (p >= 100) done++; else if (p > 0) inProg++; }));
+    S.scouts.forEach(s => this.planBadges(s.id).forEach(b => { const p = this.badgeProgress(s.id, b.id).pct; if (p >= 100) done++; else if (p > 0) inProg++; }));
     return { inProg, done };
   },
 

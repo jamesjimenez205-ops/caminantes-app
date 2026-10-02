@@ -476,3 +476,8 @@ details.scout-fold > .fold-body { margin: 0; }
 .pick-list { max-height: 46vh; overflow-y: auto; padding: 4px; }
 .pp small { color: inherit; opacity: .7; font-weight: 400; }
 .pp input:disabled + span { opacity: .75; cursor: default; }
+
+/* Progreso: la tarjeta de barras ocupa todo el ancho (sin la columna del gráfico) */
+.overall-card:has(> .wide-bars) { display: block; }
+.wide-bars .bb .grow { min-width: 0; }
+.wide-bars .row-between { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }

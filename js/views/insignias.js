@@ -8,6 +8,10 @@ Inputs['badge-q'] = el => {
 };
 
 const groupOf = b => (Sec().groups.find(g => g.k === b.group) || Sec().groups[0]);
+// Solo dos insignias se miden en horas de labor social: Caminantes · Servicio Público y Unidad · Servicio a la comunidad.
+// (Si una insignia ya tuviera requisitos con horas, se conservan y se pueden editar.)
+const SERVICE_BADGE_IDS = new Set(['a5', UNIT_SEED.find(b => b.name === 'Servicio a la comunidad')?.id]);
+const hasHours = b => !!b?.id && (SERVICE_BADGE_IDS.has(b.id) || (b.requirements || []).some(r => r.hours));
 const visibleGroups = () => Sec().groups.filter(g => !g.hidden);
 // recuerda qué listas desplegables están abiertas (el evento «toggle» no burbujea: se escucha en captura)
 document.addEventListener('toggle', e => {
@@ -106,6 +110,7 @@ function badgeForm(id, group) {
   const b = id ? Store.badge(id) : { name: '', description: '', group: (visibleGroups().find(g => g.k === group) || visibleGroups()[0]).k, requirements: [] };
   if (!b) return;
   const groups = visibleGroups();
+  const withHours = hasHours(b); // casilla de horas solo en las insignias de labor social
   const hiddenGroup = !!b.group && !!Sec().groups.find(g => g.k === b.group)?.hidden; // p. ej. Scout Balboa: no se cambia de tipo
   openModal(`<form id="badgeform">
     <header class="modal-head"><h2>${id ? 'Editar insignia' : 'Nueva insignia'}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
@@ -122,7 +127,7 @@ function badgeForm(id, group) {
         <div id="reqrows" class="req-rows"></div>
         <button type="button" class="btn" id="addreq">${icon('plus')} Agregar requisito</button>
         <input type="hidden" name="reqs" id="reqs-h">
-        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas. <b>Horas</b> (opcional): si escribes horas en una casilla, ese requisito se marca solo cuando el joven llegue a esas horas de labor social.</small></div>
+        <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas.${withHours ? ' <b>Horas</b> (opcional): si escribes horas en una casilla, ese requisito se marca solo cuando el joven llegue a esas horas de labor social.' : ''}</small></div>
     </div>
     <footer class="modal-foot">${id && !hiddenGroup ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
@@ -131,8 +136,8 @@ function badgeForm(id, group) {
       const renumber = () => $$('.req-row', list).forEach((r, i) => { $('.n', r).textContent = i + 1; });
       const addRow = (val = '', focus = true, after = null, hrs = '') => {
         const d = document.createElement('div'); d.className = 'req-row';
-        d.innerHTML = `<span class="n"></span><input class="req-in" maxlength="500" autocomplete="off" placeholder="Escribe un requisito…" aria-label="Requisito"><input class="req-hrs" type="number" step="0.25" min="0.25" inputmode="decimal" placeholder="Horas" title="Horas de labor social (opcional): el requisito se marca solo al llegar a esas horas" aria-label="Horas de labor social"><button type="button" class="icon-btn req-del" aria-label="Quitar requisito">${icon('x')}</button>`;
-        $('.req-in', d).value = val; $('.req-hrs', d).value = hrs || '';
+        d.innerHTML = `<span class="n"></span><input class="req-in" maxlength="500" autocomplete="off" placeholder="Escribe un requisito…" aria-label="Requisito">${withHours ? '<input class="req-hrs" type="number" step="0.25" min="0.25" inputmode="decimal" placeholder="Horas" title="Horas de labor social (opcional): el requisito se marca solo al llegar a esas horas" aria-label="Horas de labor social">' : ''}<button type="button" class="icon-btn req-del" aria-label="Quitar requisito">${icon('x')}</button>`;
+        $('.req-in', d).value = val; if ($('.req-hrs', d)) $('.req-hrs', d).value = hrs || '';
         if (after) after.after(d); else list.appendChild(d);
         renumber(); if (focus) $('input', d).focus();
         return d;
@@ -162,9 +167,9 @@ function badgeForm(id, group) {
       });
       $('#badgeform', m).addEventListener('submit', async e => {
         e.preventDefault();
-        const rows = $$('.req-row', m).map(r => [$('.req-in', r).value.trim(), $('.req-hrs', r).value]).filter(x => x[0]);
+        const rows = $$('.req-row', m).map(r => [$('.req-in', r).value.trim(), $('.req-hrs', r)?.value ?? '']).filter(x => x[0]);
         $('#reqs-h', m).value = rows.map(x => x[0]).join(String.fromCharCode(10));
-        const hours = rows.map(x => (x[1] === '' ? 0 : Number(String(x[1]).replace(',', '.'))));
+        const hours = withHours ? rows.map(x => (x[1] === '' ? 0 : Number(String(x[1]).replace(',', '.')))) : undefined; // sin casilla de horas: se conserva lo que haya
         const f = new FormData(e.target);
         const data = { name: f.get('name'), description: f.get('description'), group: f.get('group') || groupOf(b).k };
         const opts = { photoFile: $('#ph-file', m).files[0] || null, removePhoto: f.get('rmphoto') === 'on', hours };

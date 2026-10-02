@@ -19,9 +19,25 @@ function activityCard(a) {
     </div></article>`;
 }
 
-// Con muchas insignias (Unidad) el inicio muestra solo las que tienen avance (las 8 primeras)
-const homeBadges = () => (S.badges.length <= 8 ? S.badges
-  : S.badges.map(b => [b, Store.groupBadgeProgress(b.id).pct]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 8).map(x => x[0]));
+// Con muchas insignias el inicio muestra solo las que tienen avance (las 8 primeras)
+const homeTop = list => (list.length <= 8 ? list
+  : list.map(b => [b, Store.groupBadgeProgress(b.id).pct]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 8).map(x => x[0]));
+const homeRows = list => list.map(b => { const p = Store.groupBadgeProgress(b.id); return `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`; }).join('');
+
+// Insignias del inicio. Con varios tipos (Unidad) se separan: Destrezas y Segmentos, cada uno con su lista.
+function homeBadgeBlock() {
+  const groups = Sec().groups.filter(g => !g.hidden);
+  if (groups.length < 2) {
+    return `<div class="sec-head"><h2>Insignias del grupo</h2><a href="#/insignias" class="link">Ver requisitos</a></div>
+      <div class="card list">${homeRows(homeTop(S.badges))}</div>`;
+  }
+  return [...groups].reverse().map(g => { // Destrezas primero, luego Segmentos
+    const all = S.badges.filter(b => (b.group || groups[0].k) === g.k), shown = homeTop(all);
+    return `<div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${all.length})</small></h2><a href="#/insignias/${g.k}" class="link">Ver todas</a></div>
+      ${shown.length ? `<div class="card list">${homeRows(shown)}</div>`
+        : `<p class="muted home-empty">${all.length ? 'Todavía sin avances.' : `Aún no hay ${esc(g.name.toLowerCase())}.`}</p>`}`;
+  }).join('');
+}
 
 Views.inicio = {
   render() {
@@ -54,8 +70,7 @@ Views.inicio = {
           : emptyState('Aún no hay actividades', 'Cuando registres la primera, aparecerá aquí con sus fotos.', `<button class="btn primary" data-act="new-activity">${icon('plus')} Registrar actividad</button>`)}
       </section>
       <section>
-        <div class="sec-head"><h2>Insignias del grupo</h2><a href="#/insignias" class="link">Ver requisitos</a></div>
-        <div class="card list">${homeBadges().map(b => { const p = Store.groupBadgeProgress(b.id); return `<a class="row" href="#/insignias/${b.id}">${patch(b, 'sm')}<span class="grow"><b>${esc(b.name)}</b>${bar(p.pct)}</span><span class="pct">${p.pct}%</span></a>`; }).join('')}</div>
+        ${homeBadgeBlock()}
         ${!S.scouts.length ? `<div class="card note">${icon('users')}<span>Empieza <a href="#/caminantes">agregando a ${esc(Sec().people)}</a>.</span></div>` : ''}
       </section>
     </div>`;

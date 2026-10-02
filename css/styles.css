@@ -445,3 +445,5 @@ details.fold > p { margin: 0 18px 16px; }
 .group-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(20, 50, 30, .14); }
 .group-card h2 { font-size: 1.3rem; } .group-card .chev { transform: rotate(180deg); color: var(--muted); width: 1.3em; height: 1.3em; }
 @media (max-width: 760px) { .nav-toggle, .subnav { display: none !important; } .nav-parent { display: contents; } }
+
+.home-empty { margin: 0 0 14px; }

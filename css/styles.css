@@ -427,3 +427,21 @@ details.fold > summary small { font: 400 .9rem var(--sans); color: var(--muted);
 details.fold > :not(summary) { margin: 0 16px 16px; }
 details.fold > p { margin: 0 18px 16px; }
 .step-row { display: flex; align-items: center; gap: 12px; padding: 10px 0 0; margin-top: 6px; border-top: 1px solid var(--sand); }
+
+/* ---- Menú: Insignias desplegable */
+.nav-group { display: flex; flex-direction: column; }
+.nav-parent { display: flex; align-items: center; gap: 2px; }
+.nav-parent > a { flex: 1; min-width: 0; }
+.nav-toggle { background: none; border: 0; color: #b6c9b4; cursor: pointer; padding: 8px 10px; border-radius: 8px; display: grid; place-items: center; }
+.nav-toggle:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.nav-toggle .ic { transform: rotate(-90deg); transition: transform .15s; width: 1em; height: 1em; }
+.nav-group.open .nav-toggle .ic { transform: rotate(-90deg) scaleX(-1); }
+.subnav { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px 26px; padding-left: 10px; border-left: 2px solid rgba(255, 255, 255, .18); }
+.subnav[hidden] { display: none; }
+#side nav .subnav a { padding: 7px 12px; font-size: .92rem; }
+#side nav .subnav a small { margin-left: 6px; opacity: .7; font-weight: 400; }
+#side nav .subnav a.on { background: rgba(255, 255, 255, .92); color: var(--forest); }
+.group-card { display: flex; align-items: center; gap: 16px; text-decoration: none; color: inherit; border-left: 6px solid var(--c); transition: .15s; }
+.group-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(20, 50, 30, .14); }
+.group-card h2 { font-size: 1.3rem; } .group-card .chev { transform: rotate(180deg); color: var(--muted); width: 1.3em; height: 1.3em; }
+@media (max-width: 760px) { .nav-toggle, .subnav { display: none !important; } .nav-parent { display: contents; } }

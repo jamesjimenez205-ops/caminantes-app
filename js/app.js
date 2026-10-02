@@ -6,14 +6,27 @@ const NAV = [
 
 const route = () => { const [name, param] = (location.hash.replace(/^#\/?/, '') || 'inicio').split('/'); return { name: Object.hasOwn(Views, name) ? name : 'inicio', param: /^[A-Za-z0-9_-]{1,40}$/.test(param || '') ? param : undefined }; };
 
-function renderNav(active) {
+// Secciones con varios tipos de insignia (Unidad): «Insignias» se despliega en una página por tipo.
+const navGroups = () => Sec().groups.filter(g => !g.hidden);
+function navItem([k, label, ic], active, param) {
+  const text = esc(k === 'caminantes' ? Sec().people : label);
+  if (k === 'insignias' && navGroups().length > 1) {
+    const open = active === 'insignias' || UIState.navInsignias;
+    return `<div class="nav-group ${open ? 'open' : ''}"><div class="nav-parent"><a href="#/insignias" class="${active === 'insignias' ? 'on' : ''}">${icon(ic)}<span>${text}</span></a>
+      <button type="button" class="nav-toggle" data-act="toggle-insignias" aria-label="Mostrar u ocultar tipos de insignia" aria-expanded="${open}">${icon('back')}</button></div>
+      <div class="subnav" ${open ? '' : 'hidden'}>${navGroups().map(g => `<a href="#/insignias/${g.k}" class="${active === 'insignias' && param === g.k ? 'on' : ''}">${esc(g.name)} <small>${S.badges.filter(b => (b.group || navGroups()[0].k) === g.k).length}</small></a>`).join('')}</div></div>`;
+  }
+  return `<a href="#/${k}" class="${k === active ? 'on' : ''}">${icon(ic)}<span>${text}</span></a>`;
+}
+
+function renderNav(active, param) {
   $('#side').innerHTML = `
     <a class="brand" href="#/inicio">
       <img src="${GROUP.logo}" alt="Logo del grupo">
       <span><b>${esc(GROUP.name)}</b><small>${esc(GROUP.tagline)}</small></span></a>
     <button class="btn accent side-new" data-act="new-activity">${icon('plus')} Nueva actividad</button>
     <div class="sections">${Object.values(SECTIONS).map(s => `<button class="sec ${s.id === Store.section ? 'on' : ''}" ${s.enabled ? '' : 'disabled'} data-act="pick-section" data-id="${s.id}">${s.logo ? `<img src="${s.logo}" alt="">` : icon('tent')}<span><b>${esc(s.short)}</b><small>${s.enabled ? esc(s.ages) : 'Próximamente'}</small></span></button>`).join('')}</div>
-    <nav>${NAV.filter(n => !n[3] || Sec().features[n[3]]).map(([k, label, ic]) => `<a href="#/${k}" class="${k === active ? 'on' : ''}">${icon(ic)}<span>${esc(k === 'caminantes' ? Sec().people : label)}</span></a>`).join('')}</nav>
+    <nav>${NAV.filter(n => !n[3] || Sec().features[n[3]]).map(n => navItem(n, active, param)).join('')}</nav>
     <button class="side-foot" data-act="backup">${icon('save')}<span>Respaldo</span></button>
     <button class="side-foot" data-act="logout">${icon('logout')}<span>Cerrar sesión</span></button>
     <svg class="side-art" viewBox="0 0 250 90" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path d="M0 90V55l40-30 35 25 45-40 55 45 40-25 35 30v30z" fill="#1a5a2c"/>${pineSvg(30, 88, 1.1, '#0c2a16')}${pineSvg(70, 90, .8, '#0c2a16')}${pineSvg(200, 88, 1.2, '#0c2a16')}${pineSvg(230, 90, .9, '#0c2a16')}</svg>`;
@@ -32,7 +45,7 @@ function render(keepScroll) {
   $('#main').innerHTML = `<div class="page">${sectionBar()}${Views[name].render(param)}</div>`;
   Views[name].mount?.($('#main'), param);
   hydratePhotos($('#main'));
-  renderNav(name);
+  renderNav(name, param);
   window.scrollTo(0, keepScroll ? y : 0);
 }
 const rerender = () => render(true);
@@ -69,6 +82,7 @@ document.addEventListener('change', e => {
 window.addEventListener('hashchange', () => render());
 
 Actions['close-modal'] = closeModal;
+Actions['toggle-insignias'] = () => { UIState.navInsignias = !(UIState.navInsignias || route().name === 'insignias'); renderNav(route().name, route().param); };
 Actions['open-sections'] = () => openModal(`
   <header class="modal-head"><h2>Secciones del grupo</h2><button class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
   <div class="modal-body"><div class="section-cards">${Object.values(SECTIONS).map(s => `

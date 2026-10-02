@@ -5,7 +5,6 @@ const normTxt = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerC
 Inputs['badge-q'] = el => {
   const q = normTxt(el.value.trim());
   $$('.badge-card').forEach(c => { c.hidden = !!q && !normTxt(c.dataset.name).includes(q); });
-  $$('.group-block').forEach(g => { const hit = !!$$('.badge-card:not([hidden])', g).length; g.hidden = !!q && !hit; if (q && hit && g.tagName === 'DETAILS') g.open = true; });
 };
 
 const groupOf = b => (Sec().groups.find(g => g.k === b.group) || Sec().groups[0]);
@@ -25,23 +24,34 @@ function badgeCard(b) {
 }
 
 Views.insignias = {
+  // #/insignias → (Unidad) elegir tipo · #/insignias/<tipo> → lista de ese tipo · #/insignias/<id> → detalle
   render(id) {
     if (id && Store.badge(id)) return this.detail(id);
-    const many = S.badges.length > 8;
+    const groups = visibleGroups();
+    const g = groups.find(x => x.k === id);
+    if (groups.length > 1 && !g) return this.landing(groups);
+    return this.list(g || groups[0], groups.length > 1);
+  },
+
+  landing(groups) {
     return `
-    <div class="page-head"><div><h1>Insignias</h1><p class="sub">${esc(Sec().short)} · ${plural(S.badges.length, 'insignia', 'insignias')}</p></div>
-      <button class="btn primary" data-act="new-badge">${icon('plus')} Agregar insignia</button></div>
-    ${many ? `<div class="search"><input type="search" data-input="badge-q" placeholder="Buscar insignia…" maxlength="60" aria-label="Buscar insignia" autocomplete="off"></div>` : ''}
-    ${visibleGroups().map(g => {
+    <div class="page-head"><div><h1>Insignias</h1><p class="sub">${esc(Sec().short)} · elige un tipo</p></div></div>
+    <div class="grid badges2">${groups.map(g => {
       const list = S.badges.filter(b => groupOf(b).k === g.k);
-      const multi = visibleGroups().length > 1;
-      if (!list.length && !many && !multi) return '';
-      const inner = list.length ? `<div class="grid badges4">${list.map(badgeCard).join('')}</div>` : `<p class="muted">Aún no hay ${esc(g.name.toLowerCase())}. Usa «Agregar insignia» para crearlas.</p>`;
-      // con varios tipos (Unidad) cada uno es una lista desplegable
-      return multi
-        ? `<details class="group-block fold" data-group="${g.k}" ${UIState.openGroups.has(g.k) ? 'open' : ''}><summary><span>${esc(g.name)}</span><small>(${list.length})</small></summary>${inner}</details>`
-        : `<section class="group-block"><div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${list.length})</small></h2></div>${inner}</section>`;
-    }).join('')}`;
+      return `<a class="card group-card" href="#/insignias/${g.k}" style="--c:${g.color}"><span class="patch lg" style="--c:${g.color}">${icon(g.icon)}</span>
+        <div class="grow"><h2>${esc(g.name)}</h2><p class="muted">${list.length ? plural(list.length, g.one.toLowerCase(), g.name.toLowerCase()) : 'Aún sin insignias'}</p></div>${icon('back', 'chev')}</a>`;
+    }).join('')}</div>`;
+  },
+
+  list(g, multi) {
+    const list = S.badges.filter(b => groupOf(b).k === g.k), many = list.length > 8;
+    return `
+    ${multi ? `<a href="#/insignias" class="back">${icon('back')} Insignias</a>` : ''}
+    <div class="page-head"><div><h1>${esc(multi ? g.name : 'Insignias')}</h1><p class="sub">${esc(Sec().short)} · ${plural(list.length, 'insignia', 'insignias')}</p></div>
+      <button class="btn primary" data-act="new-badge" data-group="${g.k}">${icon('plus')} Agregar ${multi ? esc(g.one.toLowerCase()) : 'insignia'}</button></div>
+    ${many ? `<div class="search"><input type="search" data-input="badge-q" placeholder="Buscar insignia…" maxlength="60" aria-label="Buscar insignia" autocomplete="off"></div>` : ''}
+    ${list.length ? `<div class="grid badges4">${list.map(badgeCard).join('')}</div>`
+      : `<p class="muted">Aún no hay ${esc(g.name.toLowerCase())}. Usa «Agregar ${multi ? esc(g.one.toLowerCase()) : 'insignia'}» para crear la primera.</p>`}`;
   },
 
   detail(id) {
@@ -50,7 +60,7 @@ Views.insignias = {
     const sid = UIState.badgeScout;
     const p = sid ? Store.badgeProgress(sid, id) : null;
     return `
-    <a href="#/insignias" class="back">${icon('back')} Insignias</a>
+    ${visibleGroups().length > 1 ? `<a href="#/insignias/${groupOf(b).k}" class="back">${icon('back')} ${esc(groupOf(b).name)}</a>` : `<a href="#/insignias" class="back">${icon('back')} Insignias</a>`}
     <section class="card badge-head" style="--c:${b.color}">
       ${patch(b, 'lg')}<div class="grow"><small class="muted">${esc(groupOf(b).one)}</small><h1>${esc(b.name)}</h1>${b.description ? `<p class="muted">${esc(b.description)}</p>` : ''}</div>
       <button class="btn" data-act="edit-badge" data-id="${id}">${icon('edit')} Editar</button>
@@ -89,11 +99,11 @@ Views.insignias = {
   },
 };
 
-Actions['new-badge'] = () => badgeForm();
+Actions['new-badge'] = d => badgeForm(undefined, d?.group);
 Actions['edit-badge'] = d => badgeForm(d.id);
 
-function badgeForm(id) {
-  const b = id ? Store.badge(id) : { name: '', description: '', group: Sec().groups[0].k, requirements: [] };
+function badgeForm(id, group) {
+  const b = id ? Store.badge(id) : { name: '', description: '', group: (visibleGroups().find(g => g.k === group) || visibleGroups()[0]).k, requirements: [] };
   if (!b) return;
   const groups = visibleGroups();
   const hiddenGroup = !!b.group && !!Sec().groups.find(g => g.k === b.group)?.hidden; // p. ej. Scout Balboa: no se cambia de tipo

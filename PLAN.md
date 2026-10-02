@@ -71,3 +71,6 @@ El tipo «Destrezas» es opcional (`optional: true` en `SECTIONS`): nadie tiene 
 
 ## Perfil del Scout (Unidad)
 El perfil muestra primero el avance hacia el **Scout Balboa** (requisitos, estado y entrega) y luego **Destrezas** y **Segmentos** por separado, solo con las que el joven se está ganando (destrezas elegidas o con avance; segmentos con avance). Caminantes mantiene su lista única.
+
+## Scout Balboa automático
+Los requisitos comprobables se marcan solos al cumplirse (y se desmarcan si dejan de cumplirse): *Segmentos* (todos completos), *una de Explorador/Excursionista/Acampador* y *Primeros auxilios* (insignia completa, con requisitos). Proyecto, progresión y áreas de desarrollo se marcan a mano. Lo marcado a mano se respeta (`Store.MAXIMO_AUTO`, `syncMaximoProgress`).

@@ -236,6 +236,7 @@ const Store = {
     if (this.isDone(sid, rid)) await DB.del('completions', id);
     else await DB.put('completions', { id, scoutId: sid, badgeId: bid, reqId: rid, activityId: null, date: today() });
     await this.reload();
+    await this.syncMaximoProgress();
   },
   badgeProgress(sid, bid) {
     const reqs = this.badge(bid).requirements;
@@ -330,6 +331,10 @@ const Store = {
   // Requisitos con horas (insignias vinculadas a la labor social): se marcan solos cuando el total de horas de labor
   // social del joven llega a esa cantidad, y se desmarcan si baja. Solo escribe lo que cambió; lo manual se respeta.
   async syncServiceProgress() {
+    await this._syncService();
+    await this.syncMaximoProgress();
+  },
+  async _syncService() {
     const badges = [...S.badges, ...S.maximo].filter(b => b.requirements.some(r => r.hours));
     if (!badges.length) return;
     const all = await DB.all('completions');
@@ -347,6 +352,34 @@ const Store = {
       }
       for (const [id] of current) if (!want.has(id)) { await DB.del('completions', id); changed = true; }
       for (const [id, c] of want) if (!current.has(id)) { await DB.put('completions', c); changed = true; }
+    }
+    if (changed) await this.reload();
+  },
+  // Scout Balboa (Unidad): los requisitos que se pueden comprobar con los datos se marcan solos cuando el joven los cumple
+  // y se desmarcan si dejan de cumplirse. Lo marcado a mano se respeta. Los demás (proyecto, progresión, áreas) son manuales.
+  MAXIMO_AUTO: {
+    maximo01r3: sid => { const l = S.badges.filter(b => b.group === 'segmento'); return l.length > 0 && l.every(b => Store._complete(sid, b)); },
+    maximo01r4: sid => S.badges.some(b => ['Explorador', 'Excursionista', 'Acampador'].includes(b.name) && Store._complete(sid, b)),
+    maximo01r5: sid => S.badges.some(b => b.name === 'Primeros auxilios' && Store._complete(sid, b)),
+  },
+  _complete(sid, b) { const p = this.badgeProgress(sid, b.id); return p.total > 0 && p.pct >= 100; },
+  async syncMaximoProgress() {
+    if (!S.maximo.length) return;
+    this._done = null;
+    const all = await DB.all('completions');
+    let changed = false;
+    for (const b of S.maximo) {
+      const current = new Map(all.filter(c => c.badgeId === b.id && c.activityId === 'auto').map(c => [c.id, c]));
+      const taken = new Set(all.filter(c => c.badgeId === b.id && c.activityId !== 'auto').map(c => c.id));
+      const want = new Map();
+      for (const sc of S.scouts) for (const r of b.requirements) {
+        const id = sc.id + '_' + r.id;
+        if (this.MAXIMO_AUTO[r.id]?.(sc.id) && !taken.has(id)) want.set(id, { sid: sc.id, rid: r.id });
+      }
+      for (const [id] of current) if (!want.has(id)) { await DB.del('completions', id); changed = true; }
+      for (const [id, w] of want) if (!current.has(id)) {
+        await DB.put('completions', { id, scoutId: w.sid, badgeId: b.id, reqId: w.rid, activityId: 'auto', date: today() }); changed = true;
+      }
     }
     if (changed) await this.reload();
   },

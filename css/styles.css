@@ -447,3 +447,27 @@ details.fold > p { margin: 0 18px 16px; }
 @media (max-width: 760px) { .nav-toggle, .subnav { display: none !important; } .nav-parent { display: contents; } }
 
 .home-empty { margin: 0 0 14px; }
+
+/* ---- Progreso */
+.stats-3 { grid-template-columns: 1fr 1fr 1.6fr; }
+@media (max-width: 900px) { .stats-3 { grid-template-columns: 1fr 1fr; } .stats-3 .wide { grid-column: 1 / -1; } }
+.tabs { display: flex; gap: 8px; margin: 4px 0 14px; flex-wrap: wrap; }
+.tab { border: 1.5px solid var(--sand-2); background: var(--paper); color: var(--forest); padding: 10px 20px; border-radius: 99px; font: 700 .98rem var(--sans); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.tab small { background: var(--sand); border-radius: 99px; padding: 1px 8px; font-weight: 600; }
+.tab.on { background: var(--forest-2); border-color: var(--forest-2); color: #fff; } .tab.on small { background: rgba(255, 255, 255, .25); color: #fff; }
+.stack-tight { display: flex; flex-direction: column; gap: 10px; }
+details.scout-fold > summary { font: 600 1rem var(--sans); gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
+details.scout-fold > summary::before { flex: none; }
+.sum-stats { display: flex; gap: 12px; color: var(--muted); font-size: .84rem; font-weight: 500; }
+.sum-bar { width: 120px; } .sum-bar .bar { margin: 0; }
+.sum-pct { width: 42px; text-align: right; color: var(--forest); }
+.fold-body { padding: 0 16px 14px; }
+details.scout-fold > .fold-body { margin: 0; }
+.extras { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.chip-mini { display: inline-flex; align-items: center; gap: 5px; background: var(--cream); border-radius: 99px; padding: 3px 10px; font-size: .82rem; font-weight: 600; color: var(--forest); }
+.chip-mini .ic { width: 1em; height: 1em; }
+.wide-bars { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 26px; }
+@media (max-width: 560px) { .sum-bar { display: none; } .sum-stats { width: 100%; order: 5; } }
+
+.stats-row3 { grid-template-columns: repeat(3, 1fr); } .stats-row3 .wide { grid-column: 1 / -1; }
+@media (max-width: 560px) { .stats-row3 .stat b { font-size: 1.5rem; } .stats-row3 .stat { padding: 12px; } .stats-row3 .stat > span:last-child { font-size: .78rem; } }

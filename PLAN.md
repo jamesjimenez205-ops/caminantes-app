@@ -62,3 +62,6 @@ Un requisito puede llevar `hours`: se marca solo cuando el total de horas de lab
 ## Unidad: listas desplegables y Scout Balboa
 - En el menú, **Insignias** de Unidad se despliega en **Segmentos** (vacía, el grupo la irá llenando) y **Destrezas**: una página por tipo (`#/insignias/segmento`, `#/insignias/destreza`); `#/insignias` muestra las dos opciones (también en el celular). Caminantes mantiene su lista única.
 - **Máximo logro** de Unidad = **Scout Balboa** (insignia `maximo01`, tipo oculto `maximo`): va aparte de las listas y de las estadísticas (`S.maximo`). Sus requisitos los define el grupo con «Editar requisitos»; se marca el avance de cada Scout y la fecha de entrega.
+
+## Progreso
+Resumen arriba (insignias completas, en progreso, labor social, progreso general). Caminantes: tarjetas por área y matriz de jóvenes × insignias (con labor social y asistencia). Unidad: pestañas **Destrezas / Segmentos**, cada una con su resumen, las insignias con más avance y un detalle desplegable por Scout (con su labor social y asistencia).

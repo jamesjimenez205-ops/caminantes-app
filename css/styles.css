@@ -416,3 +416,14 @@ input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-
 .req-hrs { width: 96px; flex: none; }
 .hrs-note { font-weight: 600; }
 @media (max-width: 560px) { .req-row { flex-wrap: wrap; } .req-row .req-in { flex-basis: 100%; order: 2; } .req-hrs { order: 3; } }
+
+/* ---- Listas desplegables de insignias */
+details.fold { background: var(--paper); border: 1px solid var(--sand); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 14px; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px 18px; font: 700 1.15rem var(--serif); color: var(--forest); }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ''; width: 9px; height: 9px; border-right: 2.5px solid var(--forest-2); border-bottom: 2.5px solid var(--forest-2); transform: rotate(-45deg); transition: transform .15s; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary small { font: 400 .9rem var(--sans); color: var(--muted); }
+details.fold > :not(summary) { margin: 0 16px 16px; }
+details.fold > p { margin: 0 18px 16px; }
+.step-row { display: flex; align-items: center; gap: 12px; padding: 10px 0 0; margin-top: 6px; border-top: 1px solid var(--sand); }

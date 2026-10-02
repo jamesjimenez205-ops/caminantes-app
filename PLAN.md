@@ -58,3 +58,7 @@ Colección `service`: un registro por jornada con participantes (las horas cuent
 
 ## Insignias vinculadas a la labor social
 Un requisito puede llevar `hours`: se marca solo cuando el total de horas de labor social del joven (en su sección) llega a esa cantidad, y se desmarca si baja (completions con `activityId: 'labor'`). Vinculadas de fábrica: «Servicio Público» (Caminantes: 50 h y 100 h, más proyecto final e informe) y «Servicio a la comunidad» (Unidad: 50 h y 100 h). Cualquier requisito de cualquier insignia puede vincularse con la casilla «Horas» al editarla.
+
+## Unidad: listas desplegables y Scout Balboa
+- En Insignias, Unidad muestra dos listas desplegables: **Segmentos** (vacía, el grupo la irá llenando) y **Destrezas**. Caminantes mantiene su lista única.
+- **Máximo logro** de Unidad = **Scout Balboa** (insignia `maximo01`, tipo oculto `maximo`): va aparte de las listas y de las estadísticas (`S.maximo`). Sus requisitos los define el grupo con «Editar requisitos»; se marca el avance de cada Scout y la fecha de entrega.

@@ -5,10 +5,16 @@ const normTxt = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerC
 Inputs['badge-q'] = el => {
   const q = normTxt(el.value.trim());
   $$('.badge-card').forEach(c => { c.hidden = !!q && !normTxt(c.dataset.name).includes(q); });
-  $$('.group-block').forEach(g => { g.hidden = !!q && !$$('.badge-card:not([hidden])', g).length; });
+  $$('.group-block').forEach(g => { const hit = !!$$('.badge-card:not([hidden])', g).length; g.hidden = !!q && !hit; if (q && hit && g.tagName === 'DETAILS') g.open = true; });
 };
 
 const groupOf = b => (Sec().groups.find(g => g.k === b.group) || Sec().groups[0]);
+const visibleGroups = () => Sec().groups.filter(g => !g.hidden);
+// recuerda qué listas desplegables están abiertas (el evento «toggle» no burbujea: se escucha en captura)
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d?.matches?.('details.fold')) { if (d.open) UIState.openGroups.add(d.dataset.group); else UIState.openGroups.delete(d.dataset.group); }
+}, true);
 
 function badgeCard(b) {
   const p = Store.groupBadgeProgress(b.id);
@@ -26,11 +32,15 @@ Views.insignias = {
     <div class="page-head"><div><h1>Insignias</h1><p class="sub">${esc(Sec().short)} · ${plural(S.badges.length, 'insignia', 'insignias')}</p></div>
       <button class="btn primary" data-act="new-badge">${icon('plus')} Agregar insignia</button></div>
     ${many ? `<div class="search"><input type="search" data-input="badge-q" placeholder="Buscar insignia…" maxlength="60" aria-label="Buscar insignia" autocomplete="off"></div>` : ''}
-    ${Sec().groups.map(g => {
+    ${visibleGroups().map(g => {
       const list = S.badges.filter(b => groupOf(b).k === g.k);
-      if (!list.length && !many && Sec().groups.length === 1) return '';
-      return `<section class="group-block"><div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${list.length})</small></h2></div>
-        ${list.length ? `<div class="grid badges4">${list.map(badgeCard).join('')}</div>` : `<p class="muted">Aún no hay ${esc(g.name.toLowerCase())}. Usa «Agregar insignia» para crearlas.</p>`}</section>`;
+      const multi = visibleGroups().length > 1;
+      if (!list.length && !many && !multi) return '';
+      const inner = list.length ? `<div class="grid badges4">${list.map(badgeCard).join('')}</div>` : `<p class="muted">Aún no hay ${esc(g.name.toLowerCase())}. Usa «Agregar insignia» para crearlas.</p>`;
+      // con varios tipos (Unidad) cada uno es una lista desplegable
+      return multi
+        ? `<details class="group-block fold" data-group="${g.k}" ${UIState.openGroups.has(g.k) ? 'open' : ''}><summary><span>${esc(g.name)}</span><small>(${list.length})</small></summary>${inner}</details>`
+        : `<section class="group-block"><div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${list.length})</small></h2></div>${inner}</section>`;
     }).join('')}`;
   },
 
@@ -85,7 +95,8 @@ Actions['edit-badge'] = d => badgeForm(d.id);
 function badgeForm(id) {
   const b = id ? Store.badge(id) : { name: '', description: '', group: Sec().groups[0].k, requirements: [] };
   if (!b) return;
-  const groups = Sec().groups;
+  const groups = visibleGroups();
+  const hiddenGroup = !!b.group && !!Sec().groups.find(g => g.k === b.group)?.hidden; // p. ej. Scout Balboa: no se cambia de tipo
   openModal(`<form id="badgeform">
     <header class="modal-head"><h2>${id ? 'Editar insignia' : 'Nueva insignia'}</h2><button type="button" class="icon-btn" data-act="close-modal" aria-label="Cerrar">${icon('x')}</button></header>
     <div class="modal-body">
@@ -95,7 +106,7 @@ function badgeForm(id) {
             ${b.photoId ? '<label class="check rm-photo"><input type="checkbox" name="rmphoto"><span class="box">' + icon('check') + '</span>Quitar imagen</label>' : ''}
             <small class="muted">JPG, PNG o WebP. Mejor cuadrada.</small></div></div></div>
       <div class="field"><label class="lbl" for="bn">Nombre</label><input id="bn" name="name" value="${esc(b.name)}" required maxlength="60" autocomplete="off"></div>
-      ${groups.length > 1 ? `<div class="field"><label class="lbl" for="bg">Tipo</label><select id="bg" name="group">${groups.map(g => `<option value="${g.k}" ${groupOf(b).k === g.k ? 'selected' : ''}>${esc(g.one)}</option>`).join('')}</select></div>` : ''}
+      ${groups.length > 1 && !hiddenGroup ? `<div class="field"><label class="lbl" for="bg">Tipo</label><select id="bg" name="group">${groups.map(g => `<option value="${g.k}" ${groupOf(b).k === g.k ? 'selected' : ''}>${esc(g.one)}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label class="lbl" for="bd">Descripción <small>(opcional)</small></label><input id="bd" name="description" value="${esc(b.description)}" maxlength="300" autocomplete="off"></div>
       <div class="field"><div class="lbl">Requisitos <small>(1 o varios; puedes agregar más después)</small></div>
         <div id="reqrows" class="req-rows"></div>
@@ -103,7 +114,7 @@ function badgeForm(id) {
         <input type="hidden" name="reqs" id="reqs-h">
         <small class="muted">Hasta 30 requisitos de 500 caracteres cada uno.${id ? ' Si ya hay avances marcados, evita cambiar el orden: el avance sigue a la posición de cada requisito.' : ''} Con Enter se agrega otro; al pegar varias líneas se separan solas. <b>Horas</b> (opcional): si escribes horas en una casilla, ese requisito se marca solo cuando el joven llegue a esas horas de labor social.</small></div>
     </div>
-    <footer class="modal-foot">${id ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
+    <footer class="modal-foot">${id && !hiddenGroup ? `<button type="button" class="btn danger left" id="delbadge">${icon('trash')} Eliminar</button>` : ''}
       <button type="button" class="btn ghost" data-act="close-modal">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`, {
     onMount: m => {
       const list = $('#reqrows', m);

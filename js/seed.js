@@ -90,3 +90,10 @@ const UNIT_STAGES = [
   { k: 'rumbo', name: 'Rumbo', age: '13 a 14 años', desc: 'Desde que ha alcanzado la totalidad, poco más o poco menos, de los objetivos personales para las edades de 13 a 14 años.' },
   { k: 'travesia', name: 'Travesía', age: '14 a 15 años', desc: 'En el momento en que ha logrado desarrollar con éxito al menos la mitad de los objetivos personales para las edades de 14 a 15 años.' },
 ];
+
+// Máximo logro de la Unidad Scout: «Scout Balboa». Va aparte de las destrezas y segmentos (grupo oculto en las listas);
+// sus requisitos los define el grupo (Máximo logro → Editar requisitos).
+const UNIT_MAXIMO = [{
+  id: 'maximo01', section: 'unidad', group: 'maximo', order: 1, name: 'Scout Balboa', description: 'Máximo logro de la Unidad Scout',
+  icon: 'star', color: '#c9971a', requirements: [], reqVersion: REQ_VERSION, image: '',
+}];

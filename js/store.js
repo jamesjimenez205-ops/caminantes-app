@@ -1,6 +1,6 @@
 // Estado en memoria + reglas de negocio. Las fotos (blobs) se leen bajo demanda.
 // S = datos de la sección activa; ALL = todo lo guardado (todas las secciones).
-const S = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [], service: [] };
+const S = { scouts: [], badges: [], maximo: [], completions: [], activities: [], specifics: [], attendance: [], service: [] };
 const ALL = { scouts: [], badges: [], completions: [], activities: [], specifics: [], attendance: [], service: [] };
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -35,7 +35,8 @@ const Store = {
     if (!Object.hasOwn(SECTIONS, id) || !SECTIONS[id].enabled) return;
     this.section = id; try { localStorage.setItem('caminantes-seccion', id); } catch { /* nada */ }
     await this.reload();
-    if (!S.badges.length) { for (const b of SECTIONS[id].seed) await DB.put('badges', b); await this.reload(); }
+    for (const b of SECTIONS[id].seed) if (!ALL.badges.some(x => x.id === b.id) && (b.group === 'maximo' || !S.badges.length)) await DB.put('badges', b);
+    await this.reload();
     await this.syncAllActivityProgress();
     await this.syncServiceProgress();
   },
@@ -91,6 +92,9 @@ const Store = {
     }
     const uni = UNIT_SEED.find(b => b.name === 'Servicio a la comunidad'), ub = ALL.badges.find(b => b.id === uni.id);
     if (ub && !ub.requirements.length) await DB.put('badges', { ...ub, requirements: uni.requirements });
+    for (const sec of Object.values(SECTIONS)) for (const b of sec.seed.filter(x => x.group === 'maximo')) {
+      if (!ALL.badges.some(x => x.id === b.id)) await DB.put('badges', b);
+    }
     await this.reload();
     await this.syncAllActivityProgress();
     await this.syncServiceProgress();
@@ -109,6 +113,9 @@ const Store = {
     S.service.sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
     const mine = new Set(S.scouts.map(s => s.id));
     S.completions = ALL.completions.filter(c => mine.has(c.scoutId));
+    S.maximo = S.badges.filter(b => b.group === 'maximo'); // Scout Balboa: no cuenta en las listas ni en las estadísticas de insignias
+    S.badges = S.badges.filter(b => b.group !== 'maximo');
+    S.maximo.forEach(b => { if (!/^#[0-9a-f]{6}$/i.test(b.color)) b.color = '#c9971a'; if (!Object.hasOwn(ICONS, b.icon)) b.icon = 'star'; });
     S.badges.forEach(b => { if (!/^#[0-9a-f]{6}$/i.test(b.color)) b.color = '#1c4a9a'; if (!Object.hasOwn(ICONS, b.icon)) b.icon = 'compass'; }); // defensa al pintar
     S.badges.sort((a, b) => a.order - b.order);
     S.scouts.sort((a, b) => a.name.localeCompare(b.name, 'es'));
@@ -117,7 +124,7 @@ const Store = {
   },
 
   scout: id => S.scouts.find(s => s.id === id),
-  badge: id => S.badges.find(b => b.id === id),
+  badge: id => S.badges.find(b => b.id === id) || S.maximo.find(b => b.id === id),
   activity: id => S.activities.find(a => a.id === id),
 
   // ---- Caminantes
@@ -304,7 +311,7 @@ const Store = {
   // Requisitos con horas (insignias vinculadas a la labor social): se marcan solos cuando el total de horas de labor
   // social del joven llega a esa cantidad, y se desmarcan si baja. Solo escribe lo que cambió; lo manual se respeta.
   async syncServiceProgress() {
-    const badges = S.badges.filter(b => b.requirements.some(r => r.hours));
+    const badges = [...S.badges, ...S.maximo].filter(b => b.requirements.some(r => r.hours));
     if (!badges.length) return;
     const all = await DB.all('completions');
     let changed = false;

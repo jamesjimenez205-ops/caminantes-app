@@ -68,3 +68,6 @@ Resumen arriba (insignias completas, en progreso, labor social, progreso general
 
 ## Destrezas: cada joven elige las suyas
 El tipo «Destrezas» es opcional (`optional: true` en `SECTIONS`): nadie tiene que ganarlas todas. El plan de un joven = Segmentos (cuentan para todos) + las destrezas que **eligió** (`scout.chosen`) o en las que ya tiene avance/participó en una actividad. El progreso del joven, del grupo, de cada destreza y del inicio se calcula solo sobre ese plan (`Store.inPlan`, `planBadges`, `workers`). Se elige desde el perfil («Elegir destrezas») o desde la ficha de cada destreza («Quién trabaja esta destreza»).
+
+## Perfil del Scout (Unidad)
+El perfil muestra primero el avance hacia el **Scout Balboa** (requisitos, estado y entrega) y luego **Destrezas** y **Segmentos** por separado, solo con las que el joven se está ganando (destrezas elegidas o con avance; segmentos con avance). Caminantes mantiene su lista única.

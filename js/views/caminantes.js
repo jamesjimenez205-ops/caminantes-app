@@ -10,6 +10,47 @@ Changes['toggle-req'] = async el => { await Store.toggleReq(el.dataset.scout, el
 // Con muchas insignias (Unidad) el perfil muestra solo las que tienen avance
 const profileBadges = sid => (S.badges.length <= 8 ? S.badges : Store.planBadges(sid));
 
+// ¿Se está ganando esta insignia? Destrezas: la eligió o ya tiene avance/actividades. Segmentos: ya tiene avance o actividades.
+const earning = (sid, b) => (Store.isOptional(b) ? Store.inPlan(sid, b)
+  : Store.badgeProgress(sid, b.id).done > 0 || S.activities.some(a => a.badgeId === b.id && a.scoutIds.includes(sid)));
+
+const badgeBlock = (id, b) => { const bp = Store.badgeProgress(id, b.id); return `
+  <section class="card badge-block">
+    <header>${patch(b)}<div class="grow"><h3>${esc(b.name)}</h3><small class="muted">${bp.done} de ${bp.total} requisitos</small></div>${tag(bp.pct)}</header>
+    ${bar(bp.pct)}${reqChecklist(id, b)}
+  </section>`; };
+
+// Progreso del joven hacia el máximo logro de su sección (Unidad: Scout Balboa)
+function maximoCard(s) {
+  const b = S.maximo[0];
+  if (!b || !Sec().features.honor || Sec().id !== 'unidad') return '';
+  const p = Store.badgeProgress(s.id, b.id), entrega = Store.honorOf(s).steps.entrega;
+  const estado = entrega ? '<span class="tag done">Entregado</span>' : p.total && p.pct >= 100 ? '<span class="tag prog">Listo para entregar</span>' : '<span class="tag pend">En camino</span>';
+  return `<div class="sec-head"><h2>Máximo logro</h2><a class="link" href="#/maximo-logro">Ver Máximo logro</a></div>
+    <section class="card honor-card balboa" style="--c:${b.color}">
+      <header>${patch(b)}<div class="grow"><h3>${esc(b.name)}</h3><small class="muted">${p.total ? `${p.done} de ${p.total} requisitos` : 'Sin requisitos definidos'}${entrega ? ' · Entregado el ' + fmtDate(entrega) : ''}</small>${bar(p.pct)}</div>${estado}</header>
+      ${b.requirements.length ? reqChecklist(s.id, b) : ''}
+    </section>`;
+}
+
+// Insignias del perfil. Con varios tipos (Unidad): primero el avance hacia el máximo logro y luego cada tipo por separado
+// (Destrezas y Segmentos), mostrando solo las que se está ganando.
+function profileBadgesBlock(s) {
+  const id = s.id, groups = Sec().groups.filter(g => !g.hidden);
+  if (groups.length < 2) {
+    return `    <div class="sec-head"><h2>${Sec().id === 'caminantes' ? 'Insignias de competencias' : 'Insignias'}</h2>${S.badges.some(b => Store.isOptional(b)) ? `<button class="btn" data-act="pick-destrezas" data-scout="${id}">${icon('plus')} Elegir destrezas</button>` : ''}</div>
+    ${S.badges.length > 8 ? `<p class="muted">Aquí van sus segmentos y las destrezas que <b>eligió</b> o ya trabaja (las destrezas no se ganan todas: cada joven elige las suyas). Para marcar requisitos de otra, entra a <a href="#/insignias">Insignias</a>.</p>${!profileBadges(id).length ? '<p class="muted"><em>Todavía no tiene insignias en su plan.</em></p>' : ''}` : ''}
+    <div class="grid badges2">${profileBadges(id).map(b => badgeBlock(id, b)).join('')}</div>`;
+  }
+  return maximoCard(s) + [...groups].reverse().map(g => {
+    const list = S.badges.filter(b => (b.group || groups[0].k) === g.k && earning(id, b))
+      .sort((x, y) => (Store.badgeProgress(id, x.id).pct >= 100) - (Store.badgeProgress(id, y.id).pct >= 100));
+    return `<div class="sec-head"><h2>${esc(g.name)} <small class="muted">(${list.length})</small></h2>${g.optional ? `<button class="btn" data-act="pick-destrezas" data-scout="${id}">${icon('plus')} Elegir ${esc(g.name.toLowerCase())}</button>` : ''}</div>
+      ${list.length ? `<div class="grid badges2">${list.map(b => badgeBlock(id, b)).join('')}</div>`
+        : `<p class="muted">${g.optional ? `Aún no tiene ${esc(g.name.toLowerCase())} elegidas. Usa «Elegir ${esc(g.name.toLowerCase())}»: no se ganan todas, cada joven elige las suyas.` : `Todavía no ha avanzado en ningún ${esc(g.one.toLowerCase())}.`}</p>`}`;
+  }).join('');
+}
+
 Views.caminantes = {
   render(id) {
     if (id) return this.profile(id);
@@ -47,13 +88,7 @@ Views.caminantes = {
       <div class="grow"><b>${st.name}</b> <small class="muted">${st.age}</small><p class="muted">${st.desc}</p></div>
       ${d ? `<label class="stage-date"><small>Insignia entregada</small><input type="date" data-change="stage-date" data-scout="${id}" data-key="${st.k}" value="${d}"></label>` : '<small class="muted">Pendiente</small>'}</li>`; }).join('')}</ol></section>` : ''}
 
-    <div class="sec-head"><h2>${Sec().id === 'caminantes' ? 'Insignias de competencias' : 'Insignias'}</h2>${S.badges.some(b => Store.isOptional(b)) ? `<button class="btn" data-act="pick-destrezas" data-scout="${id}">${icon('plus')} Elegir destrezas</button>` : ''}</div>
-    ${S.badges.length > 8 ? `<p class="muted">Aquí van sus segmentos y las destrezas que <b>eligió</b> o ya trabaja (las destrezas no se ganan todas: cada joven elige las suyas). Para marcar requisitos de otra, entra a <a href="#/insignias">Insignias</a>.</p>${!profileBadges(id).length ? '<p class="muted"><em>Todavía no tiene insignias en su plan.</em></p>' : ''}` : ''}
-    <div class="grid badges2">${profileBadges(id).map(b => { const bp = Store.badgeProgress(id, b.id); return `
-      <section class="card badge-block">
-        <header>${patch(b)}<div class="grow"><h3>${esc(b.name)}</h3><small class="muted">${bp.done} de ${bp.total} requisitos</small></div>${tag(bp.pct)}</header>
-        ${bar(bp.pct)}${reqChecklist(id, b)}
-      </section>`; }).join('')}</div>
+    ${profileBadgesBlock(s)}
 
     ${Sec().features.specifics ? `<div class="sec-head"><h2>Competencias específicas</h2><button class="btn" data-act="add-specific" data-scout="${id}">${icon('plus')} Agregar</button></div>
     <p class="muted">Certificadas por un ente externo al movimiento scout; se acreditan dentro de un área de competencia.</p>
